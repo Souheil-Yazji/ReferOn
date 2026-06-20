@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -17,48 +17,57 @@ export default function SpecialistPortal() {
   const { specialists, referrals, updateReferralRecord } = useDemoContext()
   const showToast = useToast()
   const { t, translateSpecialty, translateUrgency } = useTranslation()
-  const [specialistId, setSpecialistId] = useState('')
   const [selectedReferralId, setSelectedReferralId] = useState(null)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showRequestInfoModal, setShowRequestInfoModal] = useState(false)
-  const [inboxReferrals, setInboxReferrals] = useState([])
+  const [fetchedReferrals, setFetchedReferrals] = useState([])
   const [loadingInbox, setLoadingInbox] = useState(!MOCK)
 
-  useEffect(() => {
-    if (specialists.length > 0 && !specialistId) {
-      setSpecialistId(specialists[0].id)
-    }
-  }, [specialists, specialistId])
-
   const loadInbox = useCallback(async () => {
-    if (MOCK || !specialistId) return
+    if (MOCK || specialists.length === 0) return
     setLoadingInbox(true)
     try {
-      const rows = await fetchSpecialistReferrals(specialistId)
-      setInboxReferrals(rows ?? [])
+      const rowsBySpecialist = await Promise.all(
+        specialists.map((s) => fetchSpecialistReferrals(s.id).catch(() => []))
+      )
+      setFetchedReferrals(rowsBySpecialist.flat().filter(Boolean))
     } catch {
       showToast(t('toasts.loadReferralsFailed'))
-      setInboxReferrals([])
+      setFetchedReferrals([])
     } finally {
       setLoadingInbox(false)
     }
-  }, [specialistId, showToast, t])
+  }, [specialists, showToast, t])
 
   useEffect(() => {
     loadInbox()
   }, [loadInbox])
 
-  const myReferrals = MOCK ? referrals.filter((r) => r.specialistId === specialistId) : inboxReferrals
+  const allReferrals = MOCK ? referrals : fetchedReferrals
 
-  const selected = myReferrals.find((r) => r.id === selectedReferralId)
+  const groups = useMemo(() => {
+    const bySpecialistId = new Map()
+    for (const r of allReferrals) {
+      if (!r.specialistId) continue
+      if (!bySpecialistId.has(r.specialistId)) bySpecialistId.set(r.specialistId, [])
+      bySpecialistId.get(r.specialistId).push(r)
+    }
+    return specialists
+      .filter((s) => bySpecialistId.has(s.id))
+      .map((s) => ({ specialist: s, referrals: bySpecialistId.get(s.id) }))
+  }, [allReferrals, specialists])
+
+  const selected = allReferrals.find((r) => r.id === selectedReferralId)
+
+  function updateLocalReferral(referralId, patch) {
+    updateReferralRecord(referralId, patch)
+    setFetchedReferrals((prev) => prev.map((r) => (r.id === referralId ? { ...r, ...patch } : r)))
+  }
 
   async function approve(referralId) {
     try {
       if (!MOCK) await approveReferral(referralId)
-      updateReferralRecord(referralId, { status: 'approved' })
-      setInboxReferrals((prev) =>
-        prev.map((r) => (r.id === referralId ? { ...r, status: 'approved' } : r))
-      )
+      updateLocalReferral(referralId, { status: 'approved' })
       showToast(t('toasts.approved'))
     } catch {
       showToast(t('toasts.approveFailed'))
@@ -68,15 +77,7 @@ export default function SpecialistPortal() {
   async function reject(reason) {
     try {
       if (!MOCK) await rejectReferral(selectedReferralId, reason)
-      updateReferralRecord(selectedReferralId, {
-        status: 'rejected',
-        rejectionReason: reason,
-      })
-      setInboxReferrals((prev) =>
-        prev.map((r) =>
-          r.id === selectedReferralId ? { ...r, status: 'rejected', rejectionReason: reason } : r
-        )
-      )
+      updateLocalReferral(selectedReferralId, { status: 'rejected', rejectionReason: reason })
       showToast(t('toasts.rejected'))
       setShowRejectModal(false)
     } catch {
@@ -85,40 +86,14 @@ export default function SpecialistPortal() {
   }
 
   function requestMoreInfo(message) {
-    updateReferralRecord(selectedReferralId, {
-      status: 'more_info_requested',
-      infoRequest: message,
-    })
-    setInboxReferrals((prev) =>
-      prev.map((r) =>
-        r.id === selectedReferralId
-          ? { ...r, status: 'more_info_requested', infoRequest: message }
-          : r
-      )
-    )
+    updateLocalReferral(selectedReferralId, { status: 'more_info_requested', infoRequest: message })
     showToast(t('toasts.infoRequestSent'))
     setShowRequestInfoModal(false)
   }
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-lg font-semibold tracking-tight text-slate-900">{t('portal.title')}</h2>
-        <select
-          value={specialistId}
-          onChange={(e) => {
-            setSpecialistId(e.target.value)
-            setSelectedReferralId(null)
-          }}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          {specialists.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <h2 className="mb-6 text-lg font-semibold tracking-tight text-slate-900">{t('portal.title')}</h2>
 
       {loadingInbox && (
         <div className="flex justify-center py-10">
@@ -126,30 +101,44 @@ export default function SpecialistPortal() {
         </div>
       )}
 
-      {!loadingInbox && myReferrals.length === 0 && (
+      {!loadingInbox && groups.length === 0 && (
         <p className="py-10 text-center text-sm text-slate-500">{t('portal.empty')}</p>
       )}
 
-      <div className="space-y-2">
-        {myReferrals.map((r) => (
-          <Card
-            key={r.id}
-            as="button"
-            onClick={() => setSelectedReferralId(r.id)}
-            className={`w-full p-4 text-left ${selectedReferralId === r.id ? 'border-brand-500' : ''}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-slate-900">
-                {t('portal.patientHeader', { initials: r.patientInitials })}
-              </span>
-              <ReferralStatusBadge status={r.status} />
+      <div className="space-y-6">
+        {groups.map(({ specialist, referrals: specialistReferrals }) => (
+          <div key={specialist.id}>
+            <h3 className="mb-2 text-sm font-semibold tracking-tight text-slate-900">
+              {specialist.name}
+              {specialist.specialty && (
+                <span className="ml-2 text-xs font-normal text-slate-500">
+                  {translateSpecialty(specialist.specialty)}
+                </span>
+              )}
+            </h3>
+            <div className="space-y-2">
+              {specialistReferrals.map((r) => (
+                <Card
+                  key={r.id}
+                  as="button"
+                  onClick={() => setSelectedReferralId(r.id)}
+                  className={`w-full p-4 text-left ${selectedReferralId === r.id ? 'border-brand-500' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-900">
+                      {t('portal.patientHeader', { initials: r.patientInitials })}
+                    </span>
+                    <ReferralStatusBadge status={r.status} />
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
+                    <span>{translateSpecialty(r.specialty)}</span>
+                    <span>{translateUrgency(r.urgency)}</span>
+                    <span>{r.dateSent}</span>
+                  </div>
+                </Card>
+              ))}
             </div>
-            <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-              <span>{translateSpecialty(r.specialty)}</span>
-              <span>{translateUrgency(r.urgency)}</span>
-              <span>{r.dateSent}</span>
-            </div>
-          </Card>
+          </div>
         ))}
       </div>
 
@@ -204,24 +193,13 @@ export default function SpecialistPortal() {
             </div>
           </div>
 
-          {selected.status === 'pending' && (
+          {(selected.status === 'pending' || selected.status === 'sent') && (
             <div className="mt-5 flex flex-wrap gap-3">
               <Button variant="primary" onClick={() => approve(selected.id)}>
                 {t('shared.approve')}
               </Button>
               <Button variant="warning" onClick={() => setShowRequestInfoModal(true)}>
                 {t('portal.requestMoreInfo')}
-              </Button>
-              <Button variant="danger" onClick={() => setShowRejectModal(true)}>
-                {t('shared.reject')}
-              </Button>
-            </div>
-          )}
-
-          {selected.status === 'sent' && (
-            <div className="mt-5 flex gap-3">
-              <Button variant="primary" onClick={() => approve(selected.id)}>
-                {t('shared.approve')}
               </Button>
               <Button variant="danger" onClick={() => setShowRejectModal(true)}>
                 {t('shared.reject')}

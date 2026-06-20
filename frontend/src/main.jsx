@@ -7,9 +7,11 @@ import { DemoProvider } from './context/DemoContext'
 import { AppSettingsProvider } from './context/AppSettingsContext'
 import { ToastProvider } from './components/ui/Toast'
 
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <AppSettingsProvider>
         <DemoProvider>
           <ToastProvider>

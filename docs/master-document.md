@@ -33,7 +33,7 @@ Physicians and clinic administrators lose time converting chart history into spe
 3. ReferOn summarizes the latest relevant chart history.
 4. AI predicts the likely specialty and explains why.
 5. ReferOn drafts a referral letter/package.
-6. ReferOn displays nearby available specialists on a map/list.
+6. ReferOn displays and proposes nearby available specialists on a map list.
 7. The physician selects a specialist and sees a ready-to-send referral preview.
 
 ### 3.3 POC Success Criteria
@@ -51,7 +51,7 @@ Physicians and clinic administrators lose time converting chart history into spe
 
 - Preloaded synthetic or de-identified patient chart fixtures.
 - Referral draft generation using latest chart history.
-- AI-assisted specialty prediction with confidence, rationale, and source references.
+- AI-assisted specialty prediction with confidence (within reason), rationale, and source references.
 - Manual referral trigger for the demo clinician/admin persona.
 - Referral preview and lightweight edit flow.
 - Specialist self-registration and profile management.

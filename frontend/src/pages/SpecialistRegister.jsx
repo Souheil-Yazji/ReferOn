@@ -5,10 +5,10 @@ import Button from '../components/ui/Button'
 import FutureLabel from '../components/ui/FutureLabel'
 import { registerSpecialist } from '../api/specialists'
 import { useDemoContext } from '../context/useDemoContext'
-import { specialtyTaxonomy } from '../fixtures/specialtyTaxonomy'
 import { geocodeCity } from '../fixtures/cityLookup'
 import { useTranslation } from '../i18n/useTranslation'
 import { getLocalizedSpecialtyGroups } from '../i18n/specialtyLabels'
+import { DEFAULT_TAXONOMY_SPECIALTY } from '../lib/specialtyResolve'
 
 const inputClass =
   'mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'
@@ -25,7 +25,7 @@ function Field({ label, children }) {
 const EMPTY_FORM = {
   name: '',
   clinic: '',
-  specialty: specialtyTaxonomy[0],
+  specialty: DEFAULT_TAXONOMY_SPECIALTY,
   subspecialty: '',
   gender: '',
   acceptedCaseTypes: '',

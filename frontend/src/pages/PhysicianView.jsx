@@ -18,12 +18,12 @@ import { useToast } from '../components/ui/useToast'
 import { getChartEntries, uploadChartDocument } from '../api/patients'
 import { predictSpecialty, generateReferralDraft, previewReferral, sendReferral } from '../api/referrals'
 import { matchSpecialists } from '../api/specialists'
-import { specialtyTaxonomy } from '../fixtures/specialtyTaxonomy'
 import { useTranslation } from '../i18n/useTranslation'
+import { DEFAULT_TAXONOMY_SPECIALTY, toTaxonomySpecialty } from '../lib/specialtyResolve'
 
 const EMPTY_DRAFT = {
   reason: '',
-  specialty: specialtyTaxonomy[0],
+  specialty: DEFAULT_TAXONOMY_SPECIALTY,
   urgency: 'Routine',
   relevantHistory: '',
   medications: '',
@@ -134,7 +134,7 @@ export default function PhysicianView() {
       updateReferral({
         id: result.referralId,
         prediction: result.prediction,
-        draft: result.draft ?? { ...EMPTY_DRAFT, specialty: result.prediction.specialty },
+        draft: result.draft ?? { ...EMPTY_DRAFT, specialty: toTaxonomySpecialty(result.prediction.specialty) },
         status: 'draft',
       })
       setPredictionStatus('done')
@@ -149,7 +149,7 @@ export default function PhysicianView() {
     try {
       const generatedDraft = referral.id
         ? await generateReferralDraft(referral.id, specialty)
-        : { ...EMPTY_DRAFT, specialty }
+        : { ...EMPTY_DRAFT, specialty: toTaxonomySpecialty(specialty) }
       updateReferral({ draft: generatedDraft, status: 'draft' })
       setDraftStatus('done')
       setCurrentStep(4)

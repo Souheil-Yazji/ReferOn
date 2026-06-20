@@ -1,4 +1,5 @@
 import { specialtyGroups } from '../fixtures/specialtyTaxonomy'
+import { toTaxonomySpecialty } from '../lib/specialtyResolve'
 
 const GROUP_LABELS = {
   en: {
@@ -76,8 +77,9 @@ export function translateSpecialtyGroup(label, lang) {
 }
 
 export function translateSpecialty(name, lang) {
-  if (lang !== 'fr') return name
-  return SPECIALTY_FR[name] ?? name
+  const canonical = toTaxonomySpecialty(name)
+  if (lang !== 'fr') return canonical
+  return SPECIALTY_FR[canonical] ?? SPECIALTY_FR[name] ?? canonical
 }
 
 export function getLocalizedSpecialtyGroups(lang) {

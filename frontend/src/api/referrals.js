@@ -2,6 +2,7 @@ import { chartEntries } from '../fixtures/chartEntries'
 import { SEEDED_PREDICTIONS } from '../fixtures/seededPredictions'
 import { isDemoCacheEnabled } from '../lib/demoCacheMode'
 import { getDemoCache, setDemoCache } from '../lib/demoCache'
+import { toTaxonomySpecialty, toClinicalSpecialty } from '../lib/specialtyResolve'
 
 const MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
@@ -26,7 +27,7 @@ export function mapBackendDraft(referral) {
   const draft = referral.draft ?? {}
   return {
     reason: draft.reason ?? '',
-    specialty: referral.specialty ?? '',
+    specialty: toTaxonomySpecialty(referral.specialty ?? ''),
     urgency: capitalizeUrgency(referral.urgency),
     relevantHistory: draft.history ?? '',
     medications: draft.medications ?? '',
@@ -49,7 +50,7 @@ export function mapBackendPrediction(referral, chartEntriesList) {
   }
 
   return {
-    specialty: pred.specialty,
+    specialty: toTaxonomySpecialty(pred.specialty),
     confidence: pred.confidence,
     rationale: pred.rationale,
     sourceRefs: (pred.sourceChartEntryIds ?? []).map((id) => {
@@ -120,7 +121,7 @@ export async function predictSpecialty(patientId, chartEntriesList = []) {
     return {
       referralId: null,
       prediction: {
-        specialty: seed.specialty,
+        specialty: toTaxonomySpecialty(seed.specialty),
         confidence: seed.confidence,
         rationale: seed.rationale,
         sourceRefs: entries.map((e) => ({
@@ -177,7 +178,7 @@ export async function generateReferralDraft(referralId, specialty) {
 
     return {
       reason: `Referral for evaluation related to ${specialty.toLowerCase()} findings.`,
-      specialty,
+      specialty: toTaxonomySpecialty(specialty),
       urgency: 'Routine',
       relevantHistory: relevantHistory || 'No relevant history on file.',
       medications: meds || 'No medications on file.',
@@ -188,11 +189,12 @@ export async function generateReferralDraft(referralId, specialty) {
   }
 
   let referral = await apiFetch(`/api/v1/referrals/${referralId}`)
-  if (referral.specialty !== specialty) {
+  const clinicalSpecialty = toClinicalSpecialty(specialty)
+  if (referral.specialty !== clinicalSpecialty) {
     referral = await apiFetch(`/api/v1/referrals/${referralId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ specialty }),
+      body: JSON.stringify({ specialty: clinicalSpecialty }),
     })
   }
   const draft = mapBackendDraft(referral)

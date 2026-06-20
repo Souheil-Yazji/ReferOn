@@ -1,6 +1,7 @@
 import { specialists } from '../fixtures/specialists'
 import { isDemoCacheEnabled } from '../lib/demoCacheMode'
 import { getDemoCache, setDemoCache } from '../lib/demoCache'
+import { toClinicalSpecialty } from '../lib/specialtyResolve'
 
 const MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
@@ -89,14 +90,15 @@ function matchCacheKey(referralId, specialty, preferences = {}) {
 }
 
 export async function matchSpecialists({ referralId, specialty, patientLocation, preferences = {}, pool }) {
+  const matchSpecialty = toClinicalSpecialty(specialty)
   if (isDemoCacheEnabled()) {
     await delay(300)
-    const key = matchCacheKey(referralId, specialty, preferences)
+    const key = matchCacheKey(referralId, matchSpecialty, preferences)
     const cached =
       getDemoCache('matchSpecialists', key) ??
       getDemoCache('matchSpecialists', referralId) ??
-      getDemoCache('matchSpecialists', `any:${specialty}`)
-    if (cached) return applyMatchPreferenceFilters(cached, preferences, specialty)
+      getDemoCache('matchSpecialists', `any:${matchSpecialty}`)
+    if (cached) return applyMatchPreferenceFilters(cached, preferences, matchSpecialty)
   }
 
   if (MOCK) {
@@ -105,7 +107,7 @@ export async function matchSpecialists({ referralId, specialty, patientLocation,
     const maxDistance = preferences.maxDistanceKm ?? Infinity
 
     return list
-      .filter((s) => s.specialty === specialty)
+      .filter((s) => s.specialty === matchSpecialty)
       .map((s) => {
         const distanceKm = patientLocation ? haversineKm(patientLocation, s.location) : null
         const matchesLanguage = preferences.preferredLanguage
@@ -136,6 +138,7 @@ export async function matchSpecialists({ referralId, specialty, patientLocation,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      specialty: matchSpecialty,
       preferences: {
         maxDistanceKm:
           preferences.maxDistanceKm != null && preferences.maxDistanceKm !== Infinity
@@ -150,10 +153,10 @@ export async function matchSpecialists({ referralId, specialty, patientLocation,
 
   const data = await apiFetch(`/api/v1/referrals/${referralId}/specialist-matches`)
   const matches = (data.matches ?? []).map(mapBackendMatch)
-  const key = matchCacheKey(referralId, specialty, preferences)
+  const key = matchCacheKey(referralId, matchSpecialty, preferences)
   setDemoCache('matchSpecialists', key, matches)
   setDemoCache('matchSpecialists', referralId, matches)
-  setDemoCache('matchSpecialists', `any:${specialty}`, matches)
+  setDemoCache('matchSpecialists', `any:${matchSpecialty}`, matches)
   return matches
 }
 

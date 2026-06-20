@@ -1,0 +1,98 @@
+[
+  {
+    "id": "chart_orth_001",
+    "patientId": "pat_ortho_001",
+    "entryType": "note",
+    "entryDate": "2026-04-20",
+    "summary": "Persistent bilateral knee pain — physiotherapy and NSAIDs failing",
+    "fullText": "Patient presents with an 8-month history of bilateral knee pain, worse on the left. Reports morning stiffness lasting approximately 45 minutes. Conservative management with 6 weeks of physiotherapy and naproxen 500 mg BID has not provided adequate relief. Functional capacity significantly reduced — difficulty climbing stairs and walking more than two city blocks. No recent fever or joint swelling. BMI 28. Referred for orthopaedic assessment."
+  },
+  {
+    "id": "chart_orth_002",
+    "patientId": "pat_ortho_001",
+    "entryType": "imaging",
+    "entryDate": "2026-04-10",
+    "summary": "MRI left knee: medial compartment osteoarthritis, moderate joint space narrowing",
+    "fullText": "MRI Left Knee — Findings: Medial compartment osteoarthritis with moderate joint space narrowing. Medial meniscal degeneration without discrete tear. Small effusion. Articular cartilage loss grade III medial tibial plateau. ACL intact. No loose bodies identified."
+  },
+  {
+    "id": "chart_orth_003",
+    "patientId": "pat_ortho_001",
+    "entryType": "imaging",
+    "entryDate": "2026-03-01",
+    "summary": "X-ray both knees: bilateral medial compartment narrowing",
+    "fullText": "X-ray Bilateral Knees (standing AP): Bilateral medial compartment joint space narrowing, moderate on the left, mild on the right. Marginal osteophytes medial and lateral femoral condyle bilaterally. No acute fracture."
+  },
+  {
+    "id": "chart_orth_004",
+    "patientId": "pat_ortho_001",
+    "entryType": "medication",
+    "entryDate": "2026-02-14",
+    "summary": "Medications: Naproxen 500 mg BID, Acetaminophen 1 g TID PRN",
+    "fullText": "Current medications reviewed: Naproxen 500 mg BID (for knee pain, ongoing), Acetaminophen 1000 mg TID PRN. No current anticoagulants. Patient tolerating medications without GI symptoms."
+  },
+  {
+    "id": "chart_orth_005",
+    "patientId": "pat_ortho_001",
+    "entryType": "allergy",
+    "entryDate": "2020-01-10",
+    "summary": "Allergy: Penicillin — rash",
+    "fullText": "Allergy documented: Penicillin — maculopapular rash. Reaction severity: moderate. Last exposure 2010."
+  },
+  {
+    "id": "chart_cardio_001",
+    "patientId": "pat_cardio_002",
+    "entryType": "note",
+    "entryDate": "2026-05-20",
+    "summary": "Exertional chest tightness and dyspnoea — ECG changes, cardiology referral indicated",
+    "fullText": "Patient reports 3-month history of exertional chest tightness and dyspnoea with moderate activity (climbing two flights of stairs, brisk walking). Denies rest pain, palpitations, syncope. Hypertension: controlled on ramipril and amlodipine. Former smoker — 15 pack-years, quit 2019. Family history: father MI at 58. ECG performed in office: non-specific ST-segment changes in leads II, III, aVF. BP 134/84 mmHg. Heart rate 76 bpm, regular. Cardiology referral indicated for further assessment."
+  },
+  {
+    "id": "chart_cardio_002",
+    "patientId": "pat_cardio_002",
+    "entryType": "lab",
+    "entryDate": "2026-05-15",
+    "summary": "ECG: non-specific ST changes in leads II, III, aVF",
+    "fullText": "12-lead ECG: Sinus rhythm, heart rate 76 bpm. Non-specific ST-segment changes in leads II, III, aVF. No acute ST elevation. QTc 432 ms. No bundle branch block. Compared to prior ECG (2025-09-10): new ST changes."
+  },
+  {
+    "id": "chart_cardio_003",
+    "patientId": "pat_cardio_002",
+    "entryType": "lab",
+    "entryDate": "2026-02-10",
+    "summary": "Lipid panel: LDL 3.8 mmol/L, elevated",
+    "fullText": "Fasting Lipid Panel: Total cholesterol 5.9 mmol/L, LDL 3.8 mmol/L (elevated), HDL 1.1 mmol/L, Triglycerides 2.2 mmol/L. eGFR 74 mL/min/1.73m². HbA1c 5.8%."
+  },
+  {
+    "id": "chart_cardio_004",
+    "patientId": "pat_cardio_002",
+    "entryType": "medication",
+    "entryDate": "2026-01-05",
+    "summary": "Medications: Ramipril 5 mg daily, Amlodipine 5 mg daily, ASA 81 mg daily",
+    "fullText": "Medications reviewed: Ramipril 5 mg daily (hypertension), Amlodipine 5 mg daily (hypertension), Aspirin 81 mg daily (cardiovascular prophylaxis). No anticoagulants. No known drug allergies."
+  },
+  {
+    "id": "chart_ambig_001",
+    "patientId": "pat_ambig_003",
+    "entryType": "note",
+    "entryDate": "2026-06-01",
+    "summary": "Fatigue, 5 kg weight loss over 4 months, intermittent RUQ discomfort — workup required",
+    "fullText": "Patient presents with 4-month history of progressive fatigue, 5 kg unintentional weight loss, and intermittent right upper quadrant discomfort described as dull and non-radiating. No jaundice, haematemesis, melaena, or change in bowel habit. Appetite reduced. No recent travel. No fever. Diabetes managed on metformin. Physical exam: mild RUQ tenderness on deep palpation, no guarding or rigidity. No palpable hepatomegaly. Further workup required. Referral for internal medicine assessment."
+  },
+  {
+    "id": "chart_ambig_002",
+    "patientId": "pat_ambig_003",
+    "entryType": "medication",
+    "entryDate": "2026-03-15",
+    "summary": "Medications: Metformin 500 mg BID",
+    "fullText": "Current medications: Metformin 500 mg BID (type 2 diabetes, well-controlled). Allergy: Sulfa drugs — urticaria. No recent bloodwork on file."
+  },
+  {
+    "id": "chart_ambig_003",
+    "patientId": "pat_ambig_003",
+    "entryType": "allergy",
+    "entryDate": "2018-04-02",
+    "summary": "Allergy: Sulfa drugs — urticaria",
+    "fullText": "Allergy: Sulfonamides (sulfa drugs) — urticaria, moderate reaction. Documented 2018."
+  }
+]

@@ -1,0 +1,257 @@
+[
+  {
+    "id": "spec_orth_001",
+    "name": "Dr. James Whitfield",
+    "clinic": "Toronto Orthopaedic Centre",
+    "specialty": "Orthopedic Surgery",
+    "subspecialty": "Knee Replacement",
+    "contactEmail": "whitfield@toortho.ca",
+    "contactPhone": "416-555-0101",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult", "geriatric"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["total knee arthroplasty", "partial knee replacement", "knee arthroscopy"],
+    "locations": [
+      { "lat": 43.6726, "lng": -79.3873, "label": "Main Office", "address": "200 Bloor St E, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-05T09:00:00Z", "capacityNotes": "Accepting new referrals" }
+  },
+  {
+    "id": "spec_orth_002",
+    "name": "Dr. Amara Singh",
+    "clinic": "University Health Network — Orthopaedics",
+    "specialty": "Orthopedic Surgery",
+    "subspecialty": null,
+    "contactEmail": "asingh@uhn.ca",
+    "contactPhone": "416-555-0102",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult", "pediatric"],
+    "referralTypes": ["routine", "urgent", "emergent"],
+    "procedures": ["knee arthroscopy", "ACL reconstruction", "hip replacement"],
+    "locations": [
+      { "lat": 43.6598, "lng": -79.3882, "label": "Toronto General", "address": "200 Elizabeth St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-14T10:00:00Z", "capacityNotes": "Limited urgent slots" }
+  },
+  {
+    "id": "spec_orth_003",
+    "name": "Dr. Lucia Fernandez",
+    "clinic": "North York General — Joint Care",
+    "specialty": "Orthopedic Surgery",
+    "subspecialty": "Sports Medicine",
+    "contactEmail": "lfernandez@nygh.ca",
+    "contactPhone": "416-555-0103",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine"],
+    "procedures": ["knee arthroscopy", "meniscus repair", "cartilage restoration"],
+    "locations": [
+      { "lat": 43.7615, "lng": -79.4111, "label": "North York General", "address": "4001 Leslie St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-08-01T09:00:00Z", "capacityNotes": "Booking 6–8 weeks out" }
+  },
+  {
+    "id": "spec_orth_004",
+    "name": "Dr. Kevin Park",
+    "clinic": "Sunnybrook Orthopaedics",
+    "specialty": "Orthopedic Surgery",
+    "subspecialty": "Lower Limb Reconstruction",
+    "contactEmail": "kpark@sunnybrook.ca",
+    "contactPhone": "416-555-0104",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult", "geriatric"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["total knee arthroplasty", "revision knee replacement", "osteotomy"],
+    "locations": [
+      { "lat": 43.7228, "lng": -79.3808, "label": "Sunnybrook Campus", "address": "2075 Bayview Ave, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-20T08:30:00Z", "capacityNotes": "Accepting complex referrals" }
+  },
+  {
+    "id": "spec_cardio_001",
+    "name": "Dr. Helen Zhao",
+    "clinic": "Peter Munk Cardiac Centre",
+    "specialty": "Cardiology",
+    "subspecialty": "Ischemic Heart Disease",
+    "contactEmail": "hzhao@pmcc.ca",
+    "contactPhone": "416-555-0201",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["stress testing", "coronary angiography", "echocardiography"],
+    "locations": [
+      { "lat": 43.6591, "lng": -79.3884, "label": "Toronto General — Munk Centre", "address": "200 Elizabeth St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-06-30T09:00:00Z", "capacityNotes": "Priority for ECG changes" }
+  },
+  {
+    "id": "spec_cardio_002",
+    "name": "Dr. Marcus Thompson",
+    "clinic": "St. Michael's Heart Health",
+    "specialty": "Cardiology",
+    "subspecialty": null,
+    "contactEmail": "mthompson@smh.ca",
+    "contactPhone": "416-555-0202",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine", "urgent", "emergent"],
+    "procedures": ["echocardiography", "Holter monitoring", "cardiac rehabilitation"],
+    "locations": [
+      { "lat": 43.6527, "lng": -79.3787, "label": "St. Michael's Hospital", "address": "30 Bond St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-03T10:00:00Z", "capacityNotes": "Walk-in urgent assessment available" }
+  },
+  {
+    "id": "spec_cardio_003",
+    "name": "Dr. Priya Nair",
+    "clinic": "Humber River Cardiology",
+    "specialty": "Cardiology",
+    "subspecialty": "Preventive Cardiology",
+    "contactEmail": "pnair@hrh.ca",
+    "contactPhone": "416-555-0203",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine"],
+    "procedures": ["echocardiography", "stress testing", "lipid management"],
+    "locations": [
+      { "lat": 43.7407, "lng": -79.5451, "label": "Humber River Hospital", "address": "1235 Wilson Ave, North York, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-10T09:00:00Z", "capacityNotes": "Accepting routine referrals" }
+  },
+  {
+    "id": "spec_cardio_004",
+    "name": "Dr. Omar Abdullah",
+    "clinic": "Scarborough Health Network — Cardiology",
+    "specialty": "Cardiology",
+    "subspecialty": null,
+    "contactEmail": "oabdullah@shn.ca",
+    "contactPhone": "416-555-0204",
+    "acceptingReferrals": false,
+    "caseTypes": ["adult", "geriatric"],
+    "referralTypes": ["routine"],
+    "procedures": ["echocardiography", "stress testing"],
+    "locations": [
+      { "lat": 43.7726, "lng": -79.2321, "label": "Scarborough General", "address": "3050 Lawrence Ave E, Scarborough, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-09-01T09:00:00Z", "capacityNotes": "Not accepting new referrals until September" }
+  },
+  {
+    "id": "spec_im_001",
+    "name": "Dr. Fatima Al-Hassan",
+    "clinic": "Mount Sinai Internal Medicine",
+    "specialty": "Internal Medicine",
+    "subspecialty": "General Internal Medicine",
+    "contactEmail": "falhassan@mtsinai.ca",
+    "contactPhone": "416-555-0301",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult", "geriatric"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["comprehensive assessment", "diagnostic workup coordination"],
+    "locations": [
+      { "lat": 43.6582, "lng": -79.3899, "label": "Mount Sinai Hospital", "address": "600 University Ave, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-08T09:00:00Z", "capacityNotes": "Accepting complex medical referrals" }
+  },
+  {
+    "id": "spec_im_002",
+    "name": "Dr. Robert Lau",
+    "clinic": "Women's College Internal Medicine",
+    "specialty": "Internal Medicine",
+    "subspecialty": null,
+    "contactEmail": "rlau@wch.ca",
+    "contactPhone": "416-555-0302",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine"],
+    "procedures": ["diagnostic workup", "chronic disease management"],
+    "locations": [
+      { "lat": 43.6643, "lng": -79.3892, "label": "Women's College Hospital", "address": "76 Grenville St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-21T10:00:00Z", "capacityNotes": "Routine referrals only" }
+  },
+  {
+    "id": "spec_gastro_001",
+    "name": "Dr. Angela Kim",
+    "clinic": "Toronto Digestive Disease Associates",
+    "specialty": "Gastroenterology",
+    "subspecialty": null,
+    "contactEmail": "akim@tdda.ca",
+    "contactPhone": "416-555-0401",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["colonoscopy", "upper endoscopy", "hepatology assessment"],
+    "locations": [
+      { "lat": 43.6536, "lng": -79.3959, "label": "Clinic Office", "address": "123 Edward St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-15T09:00:00Z", "capacityNotes": "Accepting GI and liver referrals" }
+  },
+  {
+    "id": "spec_neuro_001",
+    "name": "Dr. Sarah Ogundimu",
+    "clinic": "Toronto Western Neurology",
+    "specialty": "Neurology",
+    "subspecialty": "General Neurology",
+    "contactEmail": "sogundimu@uhn.ca",
+    "contactPhone": "416-555-0501",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["nerve conduction studies", "EEG", "neurological assessment"],
+    "locations": [
+      { "lat": 43.6559, "lng": -79.4104, "label": "Toronto Western Hospital", "address": "399 Bathurst St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-28T09:00:00Z", "capacityNotes": "Accepting general neurology" }
+  },
+  {
+    "id": "spec_rheum_001",
+    "name": "Dr. Carlos Mendez",
+    "clinic": "Rheumatology Associates Toronto",
+    "specialty": "Rheumatology",
+    "subspecialty": null,
+    "contactEmail": "cmendez@rheumat.ca",
+    "contactPhone": "416-555-0601",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine"],
+    "procedures": ["joint injection", "inflammatory arthritis assessment", "gout management"],
+    "locations": [
+      { "lat": 43.6670, "lng": -79.3832, "label": "Downtown Clinic", "address": "480 University Ave, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-08-12T09:00:00Z", "capacityNotes": "New patient bookings 6 weeks out" }
+  },
+  {
+    "id": "spec_endo_001",
+    "name": "Dr. Nina Osei",
+    "clinic": "St. Michael's Endocrinology",
+    "specialty": "Endocrinology",
+    "subspecialty": "Diabetes and Metabolism",
+    "contactEmail": "nosei@smh.ca",
+    "contactPhone": "416-555-0701",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["routine", "urgent"],
+    "procedures": ["diabetes management", "thyroid assessment", "metabolic workup"],
+    "locations": [
+      { "lat": 43.6527, "lng": -79.3787, "label": "St. Michael's Hospital", "address": "30 Bond St, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-07T10:00:00Z", "capacityNotes": "Accepting referrals" }
+  },
+  {
+    "id": "spec_onco_001",
+    "name": "Dr. Paul Tremblay",
+    "clinic": "Princess Margaret Cancer Centre",
+    "specialty": "Oncology",
+    "subspecialty": "General Oncology",
+    "contactEmail": "ptremblay@pmcc.ca",
+    "contactPhone": "416-555-0801",
+    "acceptingReferrals": true,
+    "caseTypes": ["adult"],
+    "referralTypes": ["urgent", "routine"],
+    "procedures": ["cancer staging", "chemotherapy planning", "tumour board review"],
+    "locations": [
+      { "lat": 43.6596, "lng": -79.3890, "label": "Princess Margaret Hospital", "address": "610 University Ave, Toronto, ON" }
+    ],
+    "availability": { "nextAvailableAt": "2026-07-02T09:00:00Z", "capacityNotes": "Priority triage for urgent referrals" }
+  }
+]

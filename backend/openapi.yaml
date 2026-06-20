@@ -1,0 +1,533 @@
+openapi: 3.0.3
+info:
+  title: ReferOn POC API
+  version: 0.1.0
+  description: |
+    Backend API for the ReferOn hackathon POC.
+    All routes are prefixed with /api/v1.
+    Authentication is deferred (POC only).
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Local development
+
+tags:
+  - name: Patients
+  - name: Referrals
+  - name: Specialists
+  - name: Demo
+
+paths:
+  /patients:
+    get:
+      tags: [Patients]
+      summary: Search patients
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Name search substring
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Patient" }
+
+  /patients/{patientId}:
+    get:
+      tags: [Patients]
+      summary: Get patient by ID
+      parameters:
+        - { name: patientId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Patient, content: { application/json: { schema: { $ref: "#/components/schemas/Patient" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /patients/{patientId}/chart-entries:
+    get:
+      tags: [Patients]
+      summary: Get chart entries within time window
+      parameters:
+        - { name: patientId, in: path, required: true, schema: { type: string } }
+        - { name: windowDays, in: query, schema: { type: integer, default: 180 } }
+        - { name: all, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: Chart entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patientId: { type: string }
+                  windowDays: { type: integer }
+                  entries:
+                    type: array
+                    items: { $ref: "#/components/schemas/ChartEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /referrals:
+    get:
+      tags: [Referrals]
+      summary: List referrals
+      parameters:
+        - { name: patientId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/ReferralStatus" } }
+      responses:
+        "200": { description: List of referrals, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Referral" } } } } }
+    post:
+      tags: [Referrals]
+      summary: Create manual referral draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateManualReferralInput" }
+      responses:
+        "201": { description: Created referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "400": { $ref: "#/components/responses/Validation" }
+
+  /referrals/from-chart:
+    post:
+      tags: [Referrals]
+      summary: Create AI-assisted referral draft from chart history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateAiReferralInput" }
+      responses:
+        "201": { description: Created referral with AI prediction, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "400": { $ref: "#/components/responses/Validation" }
+
+  /referrals/{referralId}:
+    get:
+      tags: [Referrals]
+      summary: Get full referral aggregate
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Full referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Referrals]
+      summary: Update referral draft and preferences
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateReferralInput" }
+      responses:
+        "200": { description: Updated referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /referrals/{referralId}/predict-specialty:
+    post:
+      tags: [Referrals]
+      summary: Re-run AI specialty prediction
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Updated referral with new prediction, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /referrals/{referralId}/preview:
+    post:
+      tags: [Referrals]
+      summary: Transition to previewed status
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Updated referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/InvalidTransition" }
+
+  /referrals/{referralId}/select-specialist:
+    post:
+      tags: [Referrals]
+      summary: Attach selected specialist
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [specialistId]
+              properties:
+                specialistId: { type: string }
+      responses:
+        "200": { description: Updated referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/InvalidTransition" }
+
+  /referrals/{referralId}/send:
+    post:
+      tags: [Referrals]
+      summary: Simulated send — advances to sent (auto-queues through pending if needed)
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Sent referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/InvalidTransition" }
+
+  /referrals/{referralId}/approve:
+    post:
+      tags: [Referrals]
+      summary: Mark referral as approved
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Approved referral, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/InvalidTransition" }
+
+  /referrals/{referralId}/reject:
+    post:
+      tags: [Referrals]
+      summary: Reject referral with reason (reason required)
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { description: Rejected referral with reason stored, content: { application/json: { schema: { $ref: "#/components/schemas/ReferralFull" } } } }
+        "400": { $ref: "#/components/responses/Validation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/InvalidTransition" }
+
+  /referrals/{referralId}/specialist-matches:
+    get:
+      tags: [Referrals]
+      summary: Get ranked specialist matches for a referral
+      parameters:
+        - { name: referralId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Ranked specialist matches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  referralId: { type: string }
+                  matches:
+                    type: array
+                    items: { $ref: "#/components/schemas/SpecialistMatchResult" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /specialists/register:
+    post:
+      tags: [Specialists]
+      summary: Specialist self-registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterSpecialistInput" }
+      responses:
+        "201": { description: Created specialist profile, content: { application/json: { schema: { $ref: "#/components/schemas/SpecialistFull" } } } }
+        "400": { $ref: "#/components/responses/Validation" }
+
+  /specialists:
+    get:
+      tags: [Specialists]
+      summary: Search specialists
+      parameters:
+        - { name: specialty, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        "200": { description: List of specialists, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Specialist" } } } } }
+
+  /specialists/{specialistId}:
+    get:
+      tags: [Specialists]
+      summary: Get specialist profile
+      parameters:
+        - { name: specialistId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Specialist profile, content: { application/json: { schema: { $ref: "#/components/schemas/SpecialistFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Specialists]
+      summary: Update specialist profile and availability
+      parameters:
+        - { name: specialistId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterSpecialistInput" }
+      responses:
+        "200": { description: Updated specialist, content: { application/json: { schema: { $ref: "#/components/schemas/SpecialistFull" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /demo/reset:
+    post:
+      tags: [Demo]
+      summary: Reset all demo data to seed state
+      responses:
+        "200":
+          description: Reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  summary:
+                    type: object
+                    properties:
+                      patients: { type: integer }
+                      chartEntries: { type: integer }
+                      specialists: { type: integer }
+
+components:
+  schemas:
+    Patient:
+      type: object
+      properties:
+        id: { type: string, example: "pat_ortho_001" }
+        name: { type: string }
+        dob: { type: string, format: date }
+        sex: { type: string, enum: [male, female, other] }
+        addressSummary: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        createdAt: { type: string, format: date-time }
+
+    ChartEntry:
+      type: object
+      properties:
+        id: { type: string }
+        patientId: { type: string }
+        entryType: { type: string, enum: [note, imaging, lab, medication, allergy, procedure, diagnosis] }
+        entryDate: { type: string, format: date }
+        summary: { type: string }
+        fullText: { type: string }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+
+    ReferralStatus:
+      type: string
+      enum: [draft, previewed, selected_specialist, pending, sent, approved, rejected]
+
+    ReferralDraftContent:
+      type: object
+      properties:
+        reason: { type: string }
+        history: { type: string }
+        medications: { type: string }
+        allergies: { type: string }
+        investigations: { type: string }
+        notes: { type: string }
+        isAiGenerated: { type: boolean }
+
+    ReferralPatientPreferences:
+      type: object
+      properties:
+        maxDistanceKm: { type: number }
+        preferredSpecialistIds: { type: array, items: { type: string } }
+        excludedSpecialistIds: { type: array, items: { type: string } }
+        language: { type: string }
+        timingNotes: { type: string }
+        otherNotes: { type: string }
+
+    AiPrediction:
+      type: object
+      properties:
+        specialty: { type: string }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        rationale: { type: string }
+        sourceChartEntryIds: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+        modelLabel: { type: string }
+        isFallback: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Referral:
+      type: object
+      properties:
+        id: { type: string, example: "ref_abc123" }
+        patientId: { type: string }
+        status: { $ref: "#/components/schemas/ReferralStatus" }
+        specialty: { type: string }
+        urgency: { type: string, enum: [routine, urgent, emergent] }
+        demoPersona: { type: string }
+        assignedSpecialistId: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ReferralFull:
+      allOf:
+        - $ref: "#/components/schemas/Referral"
+        - type: object
+          properties:
+            draft: { $ref: "#/components/schemas/ReferralDraftContent" }
+            preferences: { $ref: "#/components/schemas/ReferralPatientPreferences" }
+            latestPrediction: { $ref: "#/components/schemas/AiPrediction" }
+            rejectionReason:
+              type: object
+              properties:
+                reason: { type: string }
+                createdAt: { type: string, format: date-time }
+
+    CreateManualReferralInput:
+      type: object
+      required: [patientId]
+      properties:
+        patientId: { type: string }
+        specialty: { type: string }
+        urgency: { type: string, enum: [routine, urgent, emergent] }
+        demoPersona: { type: string }
+        reason: { type: string }
+        history: { type: string }
+        medications: { type: string }
+        allergies: { type: string }
+        investigations: { type: string }
+        notes: { type: string }
+        additionalInstructions: { type: string }
+        preferences: { $ref: "#/components/schemas/ReferralPatientPreferences" }
+
+    CreateAiReferralInput:
+      type: object
+      required: [patientId]
+      properties:
+        patientId: { type: string }
+        urgency: { type: string, enum: [routine, urgent, emergent] }
+        demoPersona: { type: string }
+        chartWindowDays: { type: integer, default: 180 }
+        additionalInstructions: { type: string }
+
+    UpdateReferralInput:
+      type: object
+      properties:
+        specialty: { type: string }
+        urgency: { type: string }
+        additionalInstructions: { type: string }
+        draft: { $ref: "#/components/schemas/ReferralDraftContent" }
+        preferences: { $ref: "#/components/schemas/ReferralPatientPreferences" }
+
+    Specialist:
+      type: object
+      properties:
+        id: { type: string, example: "spec_orth_001" }
+        name: { type: string }
+        clinic: { type: string }
+        specialty: { type: string }
+        subspecialty: { type: string }
+        contactEmail: { type: string }
+        contactPhone: { type: string }
+        acceptingReferrals: { type: boolean }
+        caseTypes: { type: array, items: { type: string } }
+        referralTypes: { type: array, items: { type: string } }
+        procedures: { type: array, items: { type: string } }
+
+    SpecialistFull:
+      allOf:
+        - $ref: "#/components/schemas/Specialist"
+        - type: object
+          properties:
+            locations:
+              type: array
+              items:
+                type: object
+                properties:
+                  lat: { type: number }
+                  lng: { type: number }
+                  label: { type: string }
+                  address: { type: string }
+            availability:
+              type: object
+              properties:
+                nextAvailableAt: { type: string, format: date-time }
+                capacityNotes: { type: string }
+
+    RegisterSpecialistInput:
+      type: object
+      required: [name, clinic, specialty]
+      properties:
+        name: { type: string }
+        clinic: { type: string }
+        specialty: { type: string }
+        subspecialty: { type: string }
+        contactEmail: { type: string }
+        contactPhone: { type: string }
+        acceptingReferrals: { type: boolean }
+        caseTypes: { type: array, items: { type: string } }
+        referralTypes: { type: array, items: { type: string } }
+        procedures: { type: array, items: { type: string } }
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              lat: { type: number }
+              lng: { type: number }
+              label: { type: string }
+              address: { type: string }
+        availability:
+          type: object
+          properties:
+            nextAvailableAt: { type: string, format: date-time }
+            capacityNotes: { type: string }
+
+    SpecialistMatchResult:
+      type: object
+      properties:
+        specialist: { $ref: "#/components/schemas/Specialist" }
+        location:
+          type: object
+          properties:
+            lat: { type: number }
+            lng: { type: number }
+            label: { type: string }
+            address: { type: string }
+        distanceKm: { type: number }
+        nextAvailableAt: { type: string, format: date-time }
+        capacityNotes: { type: string }
+        preferenceAlignment: { type: string, enum: [preferred, excluded, neutral] }
+        score: { type: number }
+        scoreBreakdown:
+          type: object
+          properties:
+            distanceScore: { type: number }
+            availabilityScore: { type: number }
+            specialtyFitScore: { type: number }
+            preferenceBonus: { type: number }
+
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+        details: { type: object }
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Validation:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    InvalidTransition:
+      description: Invalid referral status transition
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }

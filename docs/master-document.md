@@ -139,6 +139,8 @@ These are demo personas, not production security roles.
    - specialty fit (including case type and procedure match).
 4. Patient can choose favorite specialists from matching results.
 
+## 7. Functional Requirements
+
 ### 7.1 Patient and Chart History
 
 - FR-001: The POC shall include seeded synthetic or de-identified patient profiles.

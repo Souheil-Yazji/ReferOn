@@ -17,7 +17,7 @@ The POC is designed for hackathon demonstration to non-technical investors, phys
 - Use recent chart history to suggest the most relevant specialist type.
 - Show a physician/admin-facing manual trigger for referral creation.
 - Show a simple specialist self-registration flow.
-- Match referrals to nearby specialists using specialty and subspecialty fit (including accepted case types and procedures), geography, and availability.
+- Match referrals to nearby specialists using specialty and subspecialty fit (including accepted case types and procedures), geography, availability, and physician-entered patient preferences.
 - Tell a clear demo story: chart review to AI suggestion to referral draft to matched specialist.
 
 ## 3. POC Strategy
@@ -33,8 +33,9 @@ Physicians and clinic administrators lose time converting chart history into spe
 3. ReferOn summarizes the latest relevant chart history.
 4. AI predicts the likely specialty and explains why.
 5. ReferOn drafts a referral letter/package.
-6. ReferOn displays and proposes nearby available specialists on a map list.
-7. The physician selects a specialist and sees a ready-to-send referral preview.
+6. The family physician enters patient referral preferences.
+7. ReferOn displays and proposes nearby available specialists on a map list using those preferences.
+8. The physician selects a specialist and sees a ready-to-send referral preview.
 
 ### 3.3 POC Success Criteria
 
@@ -54,6 +55,7 @@ Physicians and clinic administrators lose time converting chart history into spe
 - AI-assisted specialty prediction with confidence (within reason), rationale, and source references.
 - Manual referral trigger for the demo clinician/admin persona.
 - Referral preview and lightweight edit flow.
+- Family physician capture of patient referral preferences.
 - Specialist self-registration and profile management.
 - Specialist location capture and nearest-neighbor search.
 - Specialty- and case-type-aware specialist matching with availability.
@@ -88,7 +90,7 @@ These are demo personas, not production security roles.
 
 | Persona | Description | Demo Capabilities |
 | --- | --- | --- |
-| Physician | Clinician evaluating a patient chart | Trigger AI referral, review draft, choose specialist |
+| Physician | Clinician evaluating a patient chart | Trigger AI referral, enter patient preferences, review draft, choose specialist |
 | Clinic Admin | Office staff preparing referrals | Start manual referral and prepare package preview |
 | Specialist | External specialist or clinic representative | Self-register and publish availability/location |
 | Demo Operator | Person presenting the POC | Switch between demo views and reset seed data |
@@ -108,15 +110,16 @@ These are demo personas, not production security roles.
    - missing information warnings.
 5. System drafts a referral package.
 6. User reviews and optionally edits the draft.
-7. User selects a specialist from ranked matches.
-8. System displays a ready-to-send referral preview.
+7. Family physician enters patient referral preferences.
+8. User selects a specialist from ranked matches informed by those preferences.
+9. System displays a ready-to-send referral preview.
 
 ### 6.2 Manual Referral Trigger
 
 1. Demo user starts a referral manually.
-2. User selects patient, reason for referral, preferred specialty, urgency, and notes.
+2. User selects patient, reason for referral, preferred specialty, urgency, notes, and patient referral preferences.
 3. System may optionally enrich the draft from chart history.
-4. Matching proceeds through the same specialist ranking view.
+4. Matching proceeds through the same specialist ranking view using entered preferences.
 
 ### 6.3 Specialist Self-Registration
 
@@ -125,19 +128,34 @@ These are demo personas, not production security roles.
 3. System creates a demo specialist profile.
 4. Profile becomes visible in the demo matching directory.
 
-### 6.4 Specialist Matching
+### 6.4 Patient Referral Preferences (Physician-Entered)
 
-1. System receives referral specialty, patient location, urgency, constraints, and optional preferences.
+1. Family physician enters patient referral preferences during referral creation or draft review.
+2. Preferences may include:
+   - maximum travel distance or preferred geography,
+   - preferred or favorite specialists,
+   - excluded specialists,
+   - language or communication preferences where relevant,
+   - timing or urgency constraints beyond clinical urgency,
+   - other notes reflecting what the patient wants in a referral.
+3. System stores preferences on the referral record.
+4. Preferences route into specialist matching and selection.
+
+### 6.5 Specialist Matching
+
+1. System receives referral specialty, patient location, urgency, constraints, and physician-entered patient preferences.
 2. System filters specialists by:
    - specialty and subspecialty,
    - accepted case types, referral types, and specific procedures or surgeries,
    - accepting-new-referrals flag,
-   - availability window.
+   - availability window,
+   - physician-entered patient preferences such as max distance, excluded specialists, and preferred specialists.
 3. System ranks candidates by:
    - distance from patient,
    - next available appointment or intake capacity,
-   - specialty fit (including case type and procedure match).
-4. Patient can choose favorite specialists from matching results.
+   - specialty fit (including case type and procedure match),
+   - alignment with physician-entered patient preferences.
+4. Physician selects a specialist from ranked matches informed by patient preferences.
 
 ## 7. Functional Requirements
 
@@ -153,10 +171,13 @@ These are demo personas, not production security roles.
 
 - FR-010: The system shall create a referral draft from patient chart history.
 - FR-011: The system shall allow demo users to create a referral manually.
-- FR-012: The system shall support referral fields including reason, specialty, urgency, history, medications, allergies, investigations, attachments, and notes.
+- FR-012: The system shall support referral fields including reason, specialty, urgency, history, medications, allergies, investigations, attachments, notes, and physician-entered patient preferences.
 - FR-013: The system shall allow users to edit drafts before preview.
 - FR-014: The POC shall show a ready-to-send preview but shall not submit real referrals.
 - FR-015: The system shall maintain lightweight referral status values: draft, previewed, selected_specialist.
+- FR-016: The system shall allow the family physician to enter patient referral preferences during referral creation or draft review.
+- FR-017: The system shall store physician-entered patient preferences on the referral.
+- FR-018: The system shall apply patient preferences to specialist filtering, ranking, and selection.
 
 ### 7.3 AI Specialty Prediction
 
@@ -180,8 +201,8 @@ These are demo personas, not production security roles.
 - FR-040: The system shall store specialist service locations as latitude/longitude coordinates.
 - FR-041: The POC may use pre-seeded coordinates instead of live geocoding.
 - FR-042: The system shall support nearest-neighbor search by distance from patient location.
-- FR-043: The system shall rank available specialists using distance and availability.
-- FR-044: The system shall show distance and next availability in referral matching results.
+- FR-043: The system shall rank available specialists using distance, availability, and physician-entered patient preferences.
+- FR-044: The system shall show distance, next availability, and preference alignment in referral matching results.
 
 ### 7.6 Demo Experience
 
@@ -266,6 +287,7 @@ stateDiagram-v2
 | Patient | Seeded patient demographics and location metadata |
 | ChartEntry | Seeded chart history unit |
 | Referral | Referral draft and preview state |
+| ReferralPatientPreferences | Physician-entered patient preferences used for matching |
 | ReferralDraftContent | Generated and edited referral content |
 | AIPrediction | Specialty prediction, confidence, rationale, model metadata |
 | Specialist | Seeded or self-registered demo specialist profile |
@@ -281,6 +303,7 @@ erDiagram
   PATIENT ||--o{ REFERRAL : has
   REFERRAL ||--o{ AI_PREDICTION : receives
   REFERRAL ||--|| REFERRAL_DRAFT_CONTENT : contains
+  REFERRAL ||--o| REFERRAL_PATIENT_PREFERENCES : includes
   REFERRAL }o--o| SPECIALIST : assigned_to
   SPECIALIST ||--o{ SPECIALIST_LOCATION : serves_at
   SPECIALIST ||--o{ SPECIALIST_AVAILABILITY : publishes
@@ -307,7 +330,7 @@ The first implementation should treat these as draft contracts. Exact request/re
 | POST | `/api/v1/referrals` | Create manual referral draft |
 | POST | `/api/v1/referrals/from-chart` | Create AI-assisted referral draft |
 | GET | `/api/v1/referrals/{referralId}` | Get referral details |
-| PATCH | `/api/v1/referrals/{referralId}` | Update referral draft |
+| PATCH | `/api/v1/referrals/{referralId}` | Update referral draft and patient preferences |
 | POST | `/api/v1/referrals/{referralId}/predict-specialty` | Re-run specialty prediction |
 | POST | `/api/v1/referrals/{referralId}/preview` | Generate ready-to-send preview |
 | POST | `/api/v1/referrals/{referralId}/select-specialist` | Attach selected specialist |
@@ -415,6 +438,7 @@ Future implementation must include:
 
 - A demo physician can create a referral draft from seeded chart history.
 - A demo admin can manually create a referral draft.
+- A family physician can enter patient referral preferences that affect specialist matching.
 - AI prediction returns specialty, confidence, rationale, and source references.
 - A specialist can self-register and appear in the demo directory.
 - Specialists can be ranked by specialty fit, distance, and availability.
@@ -435,6 +459,7 @@ Future implementation must include:
 
 - Build patient search and chart summary.
 - Build manual referral creation.
+- Build family physician patient preference capture.
 - Build AI-assisted draft creation.
 - Build referral preview.
 

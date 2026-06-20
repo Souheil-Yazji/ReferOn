@@ -36,6 +36,7 @@ Physicians and clinic administrators lose time converting chart history into spe
 6. The family physician enters patient referral preferences.
 7. ReferOn displays and proposes nearby available specialists on a map list using those preferences.
 8. The physician selects a specialist and sees a ready-to-send referral preview.
+9. The referral moves through simulated pending, sent, approved, or rejected status; rejections include a reason fed back to AI for future referrals.
 
 ### 3.3 POC Success Criteria
 
@@ -60,6 +61,8 @@ Physicians and clinic administrators lose time converting chart history into spe
 - Specialist location capture and nearest-neighbor search.
 - Specialty- and case-type-aware specialist matching with availability.
 - Map/list visualization of candidate specialists.
+- Simulated referral lifecycle statuses including pending, sent, approved, and rejected.
+- Rejection reason capture and AI feedback loop for future referrals.
 - API-first structure where useful, without overbuilding production infrastructure.
 
 ### 4.2 Explicitly Deferred
@@ -92,7 +95,7 @@ These are demo personas, not production security roles.
 | --- | --- | --- |
 | Physician | Clinician evaluating a patient chart | Trigger AI referral, enter patient preferences, review draft, choose specialist |
 | Clinic Admin | Office staff preparing referrals | Start manual referral and prepare package preview |
-| Specialist | External specialist or clinic representative | Self-register and publish availability/location |
+| Specialist | External specialist or clinic representative | Self-register, publish availability/location, approve or reject referrals with reason |
 | Demo Operator | Person presenting the POC | Switch between demo views and reset seed data |
 
 ## 6. Core Workflows
@@ -113,6 +116,7 @@ These are demo personas, not production security roles.
 7. Family physician enters patient referral preferences.
 8. User selects a specialist from ranked matches informed by those preferences.
 9. System displays a ready-to-send referral preview.
+10. Referral progresses through pending, sent, approved, or rejected status; if rejected, the system captures the rejection reason for AI feedback on future referrals.
 
 ### 6.2 Manual Referral Trigger
 
@@ -157,6 +161,14 @@ These are demo personas, not production security roles.
    - alignment with physician-entered patient preferences.
 4. Physician selects a specialist from ranked matches informed by patient preferences.
 
+### 6.6 Referral Status and Rejection Feedback
+
+1. After specialist selection and preview, referral status moves to pending, then sent (simulated in the POC).
+2. Specialist or demo operator marks the referral as approved or rejected.
+3. If rejected, the user must enter a rejection reason.
+4. System stores the rejection reason on the referral record.
+5. Rejection reasons are supplied to the AI service as feedback to improve future referral drafting, specialty prediction, and specialist matching.
+
 ## 7. Functional Requirements
 
 ### 7.1 Patient and Chart History
@@ -173,20 +185,22 @@ These are demo personas, not production security roles.
 - FR-011: The system shall allow demo users to create a referral manually.
 - FR-012: The system shall support referral fields including reason, specialty, urgency, history, medications, allergies, investigations, attachments, notes, and physician-entered patient preferences.
 - FR-013: The system shall allow users to edit drafts before preview.
-- FR-014: The POC shall show a ready-to-send preview but shall not submit real referrals.
-- FR-015: The system shall maintain lightweight referral status values: draft, previewed, selected_specialist.
-- FR-016: The system shall allow the family physician to enter patient referral preferences during referral creation or draft review.
-- FR-017: The system shall store physician-entered patient preferences on the referral.
-- FR-018: The system shall apply patient preferences to specialist filtering, ranking, and selection.
+- FR-014: The POC shall show a ready-to-send preview; sent, approved, and rejected statuses are simulated and do not submit real referrals.
+- FR-015: The system shall maintain referral status values: draft, previewed, selected_specialist, pending, sent, approved, and rejected.
+- FR-016: When a referral status is rejected, the system shall require and store a rejection reason.
+- FR-017: The system shall supply stored rejection reasons to the AI service as feedback to improve future referral drafting, specialty prediction, and specialist matching.
+- FR-018: The system shall allow the family physician to enter patient referral preferences during referral creation or draft review.
+- FR-019: The system shall store physician-entered patient preferences on the referral.
+- FR-020: The system shall apply patient preferences to specialist filtering, ranking, and selection.
 
 ### 7.3 AI Specialty Prediction
 
-- FR-020: The system shall predict the most likely required specialty from chart history.
-- FR-021: The system shall return confidence and rationale with each AI prediction.
-- FR-022: The system shall expose chart references used by AI-generated suggestions.
-- FR-023: The system shall allow users to override AI-predicted specialty.
-- FR-024: The POC shall display enough AI provenance for the demo, including source snippets and model/prompt label where practical.
-- FR-025: The system shall avoid presenting AI output as diagnosis or final clinical decision.
+- FR-021: The system shall predict the most likely required specialty from chart history.
+- FR-022: The system shall return confidence and rationale with each AI prediction.
+- FR-023: The system shall expose chart references used by AI-generated suggestions.
+- FR-024: The system shall allow users to override AI-predicted specialty.
+- FR-025: The POC shall display enough AI provenance for the demo, including source snippets and model/prompt label where practical.
+- FR-026: The system shall avoid presenting AI output as diagnosis or final clinical decision.
 
 ### 7.4 Specialist Registry
 
@@ -275,6 +289,12 @@ stateDiagram-v2
   draft --> previewed: referral preview generated
   previewed --> selected_specialist: specialist selected
   selected_specialist --> draft: edit referral
+  selected_specialist --> pending: referral queued
+  pending --> sent: referral sent (simulated)
+  sent --> approved: specialist approves
+  sent --> rejected: specialist rejects
+  rejected --> draft: revise and resubmit
+  approved --> [*]
 ```
 
 ## 10. Data Model Draft
@@ -286,8 +306,9 @@ stateDiagram-v2
 | DemoUser | Selected demo persona, not authenticated identity |
 | Patient | Seeded patient demographics and location metadata |
 | ChartEntry | Seeded chart history unit |
-| Referral | Referral draft and preview state |
+| Referral | Referral draft, preview, and lifecycle status |
 | ReferralPatientPreferences | Physician-entered patient preferences used for matching |
+| ReferralRejectionReason | Rejection reason and metadata when a referral is rejected |
 | ReferralDraftContent | Generated and edited referral content |
 | AIPrediction | Specialty prediction, confidence, rationale, model metadata |
 | Specialist | Seeded or self-registered demo specialist profile |
@@ -304,6 +325,7 @@ erDiagram
   REFERRAL ||--o{ AI_PREDICTION : receives
   REFERRAL ||--|| REFERRAL_DRAFT_CONTENT : contains
   REFERRAL ||--o| REFERRAL_PATIENT_PREFERENCES : includes
+  REFERRAL ||--o| REFERRAL_REJECTION_REASON : may_have
   REFERRAL }o--o| SPECIALIST : assigned_to
   SPECIALIST ||--o{ SPECIALIST_LOCATION : serves_at
   SPECIALIST ||--o{ SPECIALIST_AVAILABILITY : publishes
@@ -334,6 +356,9 @@ The first implementation should treat these as draft contracts. Exact request/re
 | POST | `/api/v1/referrals/{referralId}/predict-specialty` | Re-run specialty prediction |
 | POST | `/api/v1/referrals/{referralId}/preview` | Generate ready-to-send preview |
 | POST | `/api/v1/referrals/{referralId}/select-specialist` | Attach selected specialist |
+| POST | `/api/v1/referrals/{referralId}/send` | Mark referral as sent (simulated) |
+| POST | `/api/v1/referrals/{referralId}/approve` | Mark referral as approved |
+| POST | `/api/v1/referrals/{referralId}/reject` | Mark referral as rejected with reason |
 
 ### 11.3 Specialist Registry and Matching
 
@@ -375,6 +400,14 @@ The first implementation should treat these as draft contracts. Exact request/re
 }
 ```
 
+### 11.6 Example: Reject Referral Request
+
+```json
+{
+  "reason": "Missing recent imaging report required for orthopedic intake."
+}
+```
+
 ## 12. AI Design Notes
 
 ### 12.1 AI Responsibilities
@@ -383,6 +416,7 @@ The first implementation should treat these as draft contracts. Exact request/re
 - Draft referral summary sections from cited chart entries.
 - Identify missing information that may block referral acceptance.
 - Suggest urgency only as decision support with explicit review requirement.
+- Incorporate stored rejection reasons as feedback when drafting or matching future referrals for the same patient or similar cases.
 
 ### 12.2 POC Guardrails
 
@@ -400,6 +434,7 @@ The first implementation should treat these as draft contracts. Exact request/re
 - Build a small synthetic or de-identified test set of referral scenarios.
 - Track top-1 and top-3 specialty accuracy.
 - Track unsafe or unsupported generated statements.
+- Track whether prior rejection reasons reduce repeat rejections on similar cases.
 - Review model performance by specialty class to detect blind spots.
 
 ## 13. Future Security and Privacy Model
@@ -422,7 +457,7 @@ Future implementation must include:
 
 ### 14.1 POC Test Pyramid
 
-- Unit tests for matching logic, referral state transitions, and AI adapter parsing.
+- Unit tests for matching logic, referral state transitions, rejection reason capture, and AI adapter parsing.
 - Integration tests for API endpoints, demo data persistence, seeded chart retrieval, and geospatial search.
 - Contract tests for AI adapter response schema and distance/matching responses.
 - End-to-end tests for the demo path: patient selection, referral creation, AI prediction, specialist registration, and matching.
@@ -443,6 +478,8 @@ Future implementation must include:
 - A specialist can self-register and appear in the demo directory.
 - Specialists can be ranked by specialty fit, distance, and availability.
 - The referral preview is compelling enough to show business value.
+- Referral status can progress through pending, sent, approved, and rejected (simulated).
+- Rejection requires a reason, and that reason is available to the AI feedback loop.
 - Manual workflow remains usable when AI service is unavailable or mocked.
 
 ## 15. Initial Implementation Plan
@@ -462,6 +499,7 @@ Future implementation must include:
 - Build family physician patient preference capture.
 - Build AI-assisted draft creation.
 - Build referral preview.
+- Build simulated referral status transitions and rejection reason capture.
 
 ### Phase 2: AI Assistance and Explainability
 
@@ -469,6 +507,7 @@ Future implementation must include:
 - Add specialty prediction endpoint.
 - Add chart reference display.
 - Add manual override flow.
+- Wire rejection reasons into AI adapter feedback for future referrals.
 
 ### Phase 3: Specialist Registry and Matching Demo
 

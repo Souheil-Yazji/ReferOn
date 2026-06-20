@@ -80,6 +80,45 @@ function buildWarnings(patientId) {
   return warnings
 }
 
+function buildMockDraft(patientId, specialty) {
+  const seed = patientId ? SEEDED_PREDICTIONS[patientId] : null
+  if (seed?.draft) {
+    return {
+      reason: seed.draft.reason,
+      specialty: toTaxonomySpecialty(specialty ?? seed.specialty),
+      urgency: 'Routine',
+      relevantHistory: seed.draft.relevantHistory,
+      medications: seed.draft.medications,
+      allergies: seed.draft.allergies,
+      investigations: seed.draft.investigations,
+      additionalNotes: seed.draft.additionalNotes ?? '',
+    }
+  }
+
+  const entries = patientId
+    ? chartEntries.filter((e) => e.patientId === patientId)
+    : chartEntries
+  const meds = entries.filter((e) => e.type === 'medication').map((e) => e.content).join(' ')
+  const allergies = entries.filter((e) => e.type === 'allergy').map((e) => e.content).join(' ')
+  const investigations = entries
+    .filter((e) => e.type === 'imaging' || e.type === 'lab')
+    .map((e) => `${e.title}: ${e.content}`)
+    .join('\n')
+  const visitNotes = entries.filter((e) => e.type === 'visit_note')
+  const relevantHistory = visitNotes.map((e) => e.content).join(' ')
+
+  return {
+    reason: `Referral for evaluation related to ${(specialty ?? 'specialist').toLowerCase()} findings.`,
+    specialty: toTaxonomySpecialty(specialty),
+    urgency: 'Routine',
+    relevantHistory: relevantHistory || 'No relevant history on file.',
+    medications: meds || 'No medications on file.',
+    allergies: allergies || 'No known allergies on file.',
+    investigations: investigations || 'No investigations on file.',
+    additionalNotes: '',
+  }
+}
+
 export async function predictSpecialty(patientId, chartEntriesList = []) {
   if (isDemoCacheEnabled()) {
     await delay(350)
@@ -118,7 +157,8 @@ export async function predictSpecialty(patientId, chartEntriesList = []) {
       }
     }
     const entries = chartEntries.filter((e) => seed.sourceRefIds.includes(e.id))
-    return {
+    const draft = buildMockDraft(patientId, seed.specialty)
+    const result = {
       referralId: null,
       prediction: {
         specialty: toTaxonomySpecialty(seed.specialty),
@@ -130,8 +170,13 @@ export async function predictSpecialty(patientId, chartEntriesList = []) {
         })),
         warnings: buildWarnings(patientId),
       },
-      draft: null,
+      draft,
     }
+    if (isDemoCacheEnabled()) {
+      setDemoCache('predictSpecialty', patientId, result)
+      setDemoCache('generateReferralDraft', `${patientId}:${draft.specialty}`, draft)
+    }
+    return result
   }
 
   const referral = await apiFetch('/api/v1/referrals/from-chart', {
@@ -153,39 +198,20 @@ export async function predictSpecialty(patientId, chartEntriesList = []) {
   return result
 }
 
-export async function generateReferralDraft(referralId, specialty) {
+export async function generateReferralDraft(referralId, specialty, patientId = null) {
   if (isDemoCacheEnabled()) {
     await delay(250)
     const byReferral = getDemoCache('generateReferralDraft', `${referralId}:${specialty}`)
-    if (byReferral) return { ...byReferral, specialty }
-    for (const patientId of Object.keys(SEEDED_PREDICTIONS)) {
-      const hit = getDemoCache('generateReferralDraft', `${patientId}:${specialty}`)
-      if (hit) return { ...hit, specialty }
+    if (byReferral) return { ...byReferral, specialty: toTaxonomySpecialty(byReferral.specialty) }
+    for (const id of Object.keys(SEEDED_PREDICTIONS)) {
+      const hit = getDemoCache('generateReferralDraft', `${id}:${specialty}`)
+      if (hit) return { ...hit, specialty: toTaxonomySpecialty(hit.specialty) }
     }
   }
 
   if (MOCK) {
     await delay(500)
-    const entries = chartEntries.filter((e) => e.patientId)
-    const meds = entries.filter((e) => e.type === 'medication').map((e) => e.content).join(' ')
-    const allergies = entries.filter((e) => e.type === 'allergy').map((e) => e.content).join(' ')
-    const investigations = entries
-      .filter((e) => e.type === 'imaging' || e.type === 'lab')
-      .map((e) => `${e.title}: ${e.content}`)
-      .join('\n')
-    const visitNotes = entries.filter((e) => e.type === 'visit_note')
-    const relevantHistory = visitNotes.map((e) => e.content).join(' ')
-
-    return {
-      reason: `Referral for evaluation related to ${specialty.toLowerCase()} findings.`,
-      specialty: toTaxonomySpecialty(specialty),
-      urgency: 'Routine',
-      relevantHistory: relevantHistory || 'No relevant history on file.',
-      medications: meds || 'No medications on file.',
-      allergies: allergies || 'No known allergies on file.',
-      investigations: investigations || 'No investigations on file.',
-      additionalNotes: '',
-    }
+    return buildMockDraft(patientId, specialty)
   }
 
   let referral = await apiFetch(`/api/v1/referrals/${referralId}`)

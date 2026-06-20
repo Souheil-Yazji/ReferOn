@@ -147,9 +147,11 @@ export default function PhysicianView() {
   async function acceptPrediction(specialty) {
     setDraftStatus('loading')
     try {
-      const generatedDraft = referral.id
-        ? await generateReferralDraft(referral.id, specialty)
-        : { ...EMPTY_DRAFT, specialty: toTaxonomySpecialty(specialty) }
+      const generatedDraft = await generateReferralDraft(
+        referral.id,
+        specialty,
+        selectedPatient?.id
+      )
       updateReferral({ draft: generatedDraft, status: 'draft' })
       setDraftStatus('done')
       setCurrentStep(4)

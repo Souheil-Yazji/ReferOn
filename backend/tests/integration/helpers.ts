@@ -77,6 +77,7 @@ export async function createTestApp() {
     clinic: "Test Clinic",
     specialty: "Orthopedic Surgery",
     subspecialty: null,
+    gender: "male",
     acceptingReferrals: true,
     caseTypes: ["adult"],
     referralTypes: ["routine"],
@@ -92,6 +93,38 @@ export async function createTestApp() {
     lng: -79.39,
     label: "Main Office",
     address: "200 Test Ave, Toronto, ON",
+  });
+
+  await db.insert(specialists).values({
+    id: "spec_test_002",
+    name: "Dr. Test Female Orthopedic",
+    clinic: "Test Clinic East",
+    specialty: "Orthopedic Surgery",
+    subspecialty: null,
+    gender: "female",
+    acceptingReferrals: true,
+    caseTypes: ["adult"],
+    referralTypes: ["routine"],
+    procedures: ["knee replacement"],
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await db.insert(specialistLocations).values({
+    id: genericId(),
+    specialistId: "spec_test_002",
+    lat: 43.67,
+    lng: -79.37,
+    label: "East Office",
+    address: "300 Test Ave, Toronto, ON",
+  });
+
+  await db.insert(specialistAvailability).values({
+    id: genericId(),
+    specialistId: "spec_test_002",
+    nextAvailableAt: "2026-07-02T09:00:00Z",
+    capacityNotes: "Test availability",
+    updatedAt: now,
   });
 
   await db.insert(specialistAvailability).values({

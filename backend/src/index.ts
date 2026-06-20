@@ -14,9 +14,19 @@ export async function buildApp() {
         : { level: "info" },
   });
 
-  // CORS for local frontend development
+  // In development, allow any local frontend origin (Vite may use 5173, 5174, etc.)
   await app.register(cors, {
-    origin: env.CORS_ORIGIN,
+    origin:
+      env.NODE_ENV === "development"
+        ? (origin, callback) => {
+            if (!origin) return callback(null, true);
+            const allowed =
+              /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+              /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
+              /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin);
+            callback(null, allowed);
+          }
+        : env.CORS_ORIGIN,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   });
 

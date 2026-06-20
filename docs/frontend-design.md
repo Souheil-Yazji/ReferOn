@@ -52,13 +52,14 @@ colors: {
     text:   '#854d0e',
   },
   status: {
-    draft:              '#e2e8f0',
-    previewed:          '#dbeafe',
-    selected_specialist:'#ede9fe',
-    pending:            '#fef9c3',
-    sent:               '#dbeafe',
-    approved:           '#dcfce7',
-    rejected:           '#fee2e2',
+    draft:                '#e2e8f0',
+    previewed:            '#dbeafe',
+    selected_specialist:  '#ede9fe',
+    pending:              '#fef9c3',
+    sent:                 '#dbeafe',
+    approved:             '#dcfce7',
+    more_info_requested:  '#ffedd5',
+    rejected:             '#fee2e2',
   },
   future: '#f1f5f9',    // grey — future/deferred feature labels
 }
@@ -112,7 +113,8 @@ src/
 │       ├── SpecialistCard.jsx
 │       ├── SpecialistMap.jsx
 │       ├── SpecialistList.jsx
-│       └── RejectionReasonModal.jsx
+│       ├── RejectionReasonModal.jsx
+│       └── RequestInfoModal.jsx
 │
 ├── api/
 │   ├── patients.js
@@ -264,7 +266,7 @@ Step 6: Match Specialist
 Step 7: Referral Preview & Send
 ```
 
-**Step indicator** — horizontal row of numbered circles. Completed steps are filled brand-500, current step has a ring, future steps are grey.
+**Step indicator** — horizontal row of numbered circles. Completed steps are filled brand-500, current step has a ring, future steps are grey. Completed step circles are clickable — clicking one navigates back to that step without losing entered data. Every step (except Step 1) also shows a "Back" button that returns to the previous step. Navigating back and then forward again preserves whatever the physician already entered; nothing is cleared until they explicitly change it.
 
 #### Step 1 — Select Patient
 - Search input (filters `patients` fixture by name or OHIP)
@@ -276,18 +278,16 @@ Step 7: Referral Preview & Send
 - `<ChartSummary />` renders chart entries grouped by type (visit notes, labs, imaging, medications, allergies)
 - Each entry shows date, type badge, title, and expandable content
 - "Create Referral from Chart" primary button at bottom → triggers AI call → advances to Step 3
-- "Create Manually" secondary button → skips to Step 4 with empty draft
 
 #### Step 3 — AI Specialty Prediction
 - Full-width `<SpecialtyPredictionCard />` (see Section 9)
 - "Accept & Continue" button → advances to Step 4 with predicted specialty pre-filled
-- "Override Specialty" dropdown → lets physician pick different specialty, then continue
 
 #### Step 4 — Edit Referral Draft
 - `<ReferralDraftForm />` with fields:
   - Reason for referral (textarea)
   - Specialty (pre-filled, editable)
-  - Urgency (select: Routine / Urgent / Emergent)
+  - Urgency (select: Routine / Urgent)
   - Relevant history (AI-generated, editable, wrapped in `<AIGeneratedBlock />`)
   - Medications (AI-generated, editable)
   - Allergies (AI-generated, editable)
@@ -299,24 +299,23 @@ Step 7: Referral Preview & Send
 - `<PatientPreferencesForm />` with fields:
   - Max travel distance (select: 10km / 25km / 50km / Any)
   - Preferred language (optional text input)
-  - Preferred specialists (multi-select from fixture list)
-  - Excluded specialists (multi-select from fixture list)
-  - Timing notes (textarea, e.g. "Patient works nights, prefers morning appointments")
   - Other notes (textarea)
+- Favoriting specific specialists by name happens on Step 6 (via the heart icon on each `<SpecialistCard />`), not here.
 - "Find Specialists" button → runs matching → advances to Step 6
 
 #### Step 6 — Match Specialist
 - Two-panel layout:
-  - Left: `<SpecialistList />` — ranked cards with distance, next available, specialty fit badge, preference alignment indicator
+  - Left: `<SpecialistList />` — shows **all** specialists (not filtered down to a narrow match), with any specialist the physician has favorited (heart icon) pinned to the top of the list, followed by the rest sorted by distance
   - Right: `<SpecialistMap />` — Leaflet map with specialist pins, patient location pin
+- Each `<SpecialistCard />` has a heart icon (top of card) to toggle favorite status; favoriting is sticky across the demo session (stored in `DemoContext`)
 - Clicking a specialist card highlights the map pin and vice versa
 - "Select This Specialist" button on each card → advances to Step 7
 
 #### Step 7 — Referral Preview & Send
 - `<ReferralPreview />` — formatted referral letter preview (read-only)
 - Shows: patient info, referring physician (demo persona), specialist selected, referral content
-- "Send Referral" button → marks status as `sent` (simulated), shows success toast
-- Status transitions to `pending` then `sent` with a brief animated delay for demo effect
+- "Send Referral" button → marks status as `sent` (simulated) directly, shows success toast
+- The `pending` status is a **future feature** — in production, once real fax/email submission exists, sending will transition through `pending` before `sent`. For this POC, that intermediate state is skipped and a `<FutureLabel>Pending status coming in production</FutureLabel>` is shown instead.
 - `<FutureLabel>Real fax/email submission coming in production</FutureLabel>` shown below button
 
 ---
@@ -413,7 +412,13 @@ Each referral row shows: patient name (anonymized as initials for demo), special
 Clicking a referral opens a detail panel with:
 - Referral content (read-only)
 - "Approve" button → sets status to `approved`
+- "Request More Info" button → opens `<RequestInfoModal />`
 - "Reject" button → opens `<RejectionReasonModal />`
+
+`<RequestInfoModal />`:
+- Text area: "What additional information do you need? (required)"
+- Submit → sets status to `more_info_requested`, stores the request message, closes modal
+- The request message is displayed on the referral record (physician-facing) with an orange banner so the physician knows to follow up
 
 `<RejectionReasonModal />`:
 - Text area: "Reason for rejection (required)"
@@ -439,7 +444,6 @@ This is the visual centrepiece of the demo. Build it first.
 │  🤖 AI Specialty Prediction          [AI-assisted]      │
 │                                                         │
 │  Orthopedic Surgery                                     │
-│  ████████████████░░░░  82% confidence     HIGH         │
 │                                                         │
 │  Rationale                                              │
 │  Recent chart entries show persistent right knee pain,  │
@@ -452,12 +456,11 @@ This is the visual centrepiece of the demo. Build it first.
 │                                                         │
 │  ⚠️  Medication list has not been updated in 90+ days   │
 │                                                         │
-│  [Accept & Continue]  [Override Specialty ▾]            │
+│  [Accept & Continue]                                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
-- Confidence bar: green if ≥ 0.80, yellow if 0.50–0.79, red if < 0.50
-- Confidence label: HIGH / MEDIUM / LOW
+- No confidence score or override control is shown — the physician either accepts the predicted specialty or edits the specialty directly on the Step 4 draft form
 - Source references are clickable chips that expand the chart entry inline
 - Warnings render in `warning` color tokens
 - The whole card is wrapped in `<AIGeneratedBlock />`
@@ -468,7 +471,8 @@ This is the visual centrepiece of the demo. Build it first.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Dr. Aisha Patel                    ● Accepting      │
+│  ♥                                  ● Accepting      │
+│  Dr. Aisha Patel                                      │
 │  Toronto Orthopedic Centre                           │
 │  Orthopedic Surgery · Sports Medicine                │
 │                                                      │
@@ -480,6 +484,7 @@ This is the visual centrepiece of the demo. Build it first.
 └──────────────────────────────────────────────────────┘
 ```
 
+- Heart icon at the top of the card toggles favorite status (filled/pink when favorited, outline when not). Favorited specialists are pinned to the top of `<SpecialistList />` on Step 6.
 - Green dot for accepting referrals, grey dot if not
 - Distance and next available always visible
 - Case type chips show matched types highlighted in brand color
@@ -560,6 +565,7 @@ VITE_API_BASE=http://localhost:8000
   currentReferral: null,
   currentStep: 1,
   specialists: [],              // in-memory specialist list (fixtures + registered)
+  favoriteSpecialistIds: [],    // specialist ids the physician has hearted, pinned to top of Step 6 list
 }
 ```
 
@@ -586,11 +592,14 @@ AI call specifically:
 The frontend manages referral status transitions in `DemoContext`. Valid transitions:
 
 ```
-draft → previewed → selected_specialist → pending → sent → approved
-                                                         → rejected → draft
+draft → previewed → selected_specialist → sent → approved
+                                                → more_info_requested → draft
+                                                → rejected → draft
 ```
 
-On each transition, show a toast notification (bottom-right, 3s duration) confirming the status change. On `rejected`, auto-open `<RejectionReasonModal />`.
+`pending` is a **future/production-only** status (see Section 8.1 Step 7) — it is not part of the active POC flow and does not appear in `DemoContext` transitions today, but the `status` color token and `<ReferralStatusBadge />` mapping for it are kept reserved for when real async submission lands.
+
+On each transition, show a toast notification (bottom-right, 3s duration) confirming the status change. On `rejected`, auto-open `<RejectionReasonModal />`. On `more_info_requested`, auto-open `<RequestInfoModal />` (specialist side).
 
 ---
 

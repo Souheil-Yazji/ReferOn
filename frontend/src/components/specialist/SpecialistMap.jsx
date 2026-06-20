@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import { useTranslation } from '../../i18n/useTranslation'
 
 const patientIcon = L.divIcon({
   className: '',
@@ -29,15 +30,15 @@ function FitBounds({ points }) {
 }
 
 export default function SpecialistMap({ patientLocation, specialists, highlightedId, onMarkerHover }) {
+  const { t } = useTranslation()
+
   const points = useMemo(() => {
     const pts = specialists.map((s) => [s.location.lat, s.location.lng])
     if (patientLocation) pts.push([patientLocation.lat, patientLocation.lng])
     return pts
   }, [specialists, patientLocation])
 
-  const center = patientLocation
-    ? [patientLocation.lat, patientLocation.lng]
-    : [43.6532, -79.3832]
+  const center = patientLocation ? [patientLocation.lat, patientLocation.lng] : [43.6532, -79.3832]
 
   return (
     <div className="h-full w-full overflow-hidden rounded-lg border border-slate-200">
@@ -49,7 +50,7 @@ export default function SpecialistMap({ patientLocation, specialists, highlighte
         <FitBounds points={points} />
         {patientLocation && (
           <Marker position={[patientLocation.lat, patientLocation.lng]} icon={patientIcon}>
-            <Popup>Patient location</Popup>
+            <Popup>{t('specialist.patientLocation')}</Popup>
           </Marker>
         )}
         {specialists.map((s) => (

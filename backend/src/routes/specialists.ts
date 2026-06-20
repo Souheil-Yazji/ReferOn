@@ -13,6 +13,7 @@ interface RegisterBody {
   clinic: string;
   specialty: string;
   subspecialty?: string;
+  gender?: string;
   contactEmail?: string;
   contactPhone?: string;
   caseTypes?: string[];
@@ -78,6 +79,7 @@ export async function specialistRoutes(app: FastifyInstance) {
         clinic: body.clinic,
         specialty: body.specialty,
         subspecialty: body.subspecialty ?? null,
+        gender: body.gender ?? null,
         contactEmail: body.contactEmail ?? null,
         contactPhone: body.contactPhone ?? null,
         acceptingReferrals: body.acceptingReferrals ?? true,
@@ -191,6 +193,7 @@ export async function specialistRoutes(app: FastifyInstance) {
       "clinic",
       "specialty",
       "subspecialty",
+      "gender",
       "contactEmail",
       "contactPhone",
       "acceptingReferrals",

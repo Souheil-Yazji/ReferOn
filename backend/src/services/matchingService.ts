@@ -17,6 +17,7 @@ export interface SpecialistMatchResult {
     clinic: string;
     specialty: string;
     subspecialty: string | null;
+    gender: string | null;
     contactEmail: string | null;
     contactPhone: string | null;
     acceptingReferrals: boolean;
@@ -79,6 +80,7 @@ export async function getSpecialistMatches(
   const preferredIds = (prefs?.preferredSpecialistIds as string[] | null) ?? [];
   const excludedIds = (prefs?.excludedSpecialistIds as string[] | null) ?? [];
   const maxDistanceKm = prefs?.maxDistanceKm ?? null;
+  const genderPref = prefs?.gender?.toLowerCase() ?? null;
   const referralSpecialty = referral.specialty;
 
   // Load all accepting specialists
@@ -124,6 +126,12 @@ export async function getSpecialistMatches(
     // Filter: excluded by patient preference
     if (excludedIds.includes(spec.id)) continue;
 
+    // Filter: preferred specialist gender
+    if (genderPref) {
+      const specGender = spec.gender?.toLowerCase() ?? null;
+      if (specGender !== genderPref) continue;
+    }
+
     const loc = locationMap.get(spec.id) ?? null;
     const avail = availabilityMap.get(spec.id) ?? null;
 
@@ -167,6 +175,7 @@ export async function getSpecialistMatches(
         clinic: spec.clinic,
         specialty: spec.specialty,
         subspecialty: spec.subspecialty,
+        gender: spec.gender,
         contactEmail: spec.contactEmail,
         contactPhone: spec.contactPhone,
         acceptingReferrals: spec.acceptingReferrals,

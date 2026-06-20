@@ -122,9 +122,12 @@ export async function predictSpecialtyWithOpenAI(
     signal,
   });
 
-  const payload = (await response.json()) as OpenAIResponsesPayload;
+  const payload = (await response.json()) as OpenAIResponsesPayload & {
+    error?: { message?: string };
+  };
   if (!response.ok) {
-    throw new Error(`OpenAI responded with ${response.status}`);
+    const detail = payload.error?.message ?? response.statusText;
+    throw new Error(`OpenAI responded with ${response.status}: ${detail}`);
   }
 
   return parseOpenAIPredictionResponse(payload);

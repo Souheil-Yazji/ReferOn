@@ -1,42 +1,68 @@
 import { chartEntries } from '../fixtures/chartEntries'
+import { SEEDED_PREDICTIONS } from '../fixtures/seededPredictions'
+import { isDemoCacheEnabled } from '../lib/demoCacheMode'
+import { getDemoCache, setDemoCache } from '../lib/demoCache'
 
 const MOCK = import.meta.env.VITE_USE_MOCK === 'true'
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms))
 
-// Demo-only mapping from patient to a seeded specialty prediction, since
-// there's no real model behind this POC. Real integration point: a backend
-// AI service that classifies specialty from chart entries.
-const SEEDED_PREDICTIONS = {
-  pat_001: {
-    specialty: 'Orthopedic Surgery',
-    confidence: 0.82,
-    rationale:
-      'Recent chart entries show persistent right knee pain, failed conservative management over 6 months, and abnormal MRI findings. These findings align with orthopedic surgical evaluation criteria.',
-    sourceRefIds: ['chart_001', 'chart_002'],
-  },
-  pat_002: {
-    specialty: 'Cardiology',
-    confidence: 0.74,
-    rationale:
-      'Exertional chest discomfort, dyslipidemia on recent labs, and nonspecific ECG ST changes warrant cardiology risk assessment.',
-    sourceRefIds: ['chart_010', 'chart_011', 'chart_012'],
-  },
-  pat_003: {
-    specialty: 'Dermatology',
-    confidence: 0.88,
-    rationale:
-      'Documented irregular borders and color change in a shoulder mole meeting partial ABCDE criteria indicate need for dermatologic evaluation to rule out malignancy.',
-    sourceRefIds: ['chart_020', 'chart_021'],
-  },
-  pat_004: {
-    specialty: 'Gastroenterology',
-    confidence: 0.61,
-    rationale:
-      'Chronic epigastric pain with only partial response to PPI therapy and negative H. pylori testing suggests need for endoscopic evaluation.',
-    sourceRefIds: ['chart_030', 'chart_031'],
-  },
+async function apiFetch(path, options) {
+  const res = await fetch(`${BASE}${path}`, options)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message || `Request failed (${res.status})`)
+  }
+  return res.json()
+}
+
+function capitalizeUrgency(urgency) {
+  if (!urgency) return 'Routine'
+  return urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()
+}
+
+export function mapBackendDraft(referral) {
+  const draft = referral.draft ?? {}
+  return {
+    reason: draft.reason ?? '',
+    specialty: referral.specialty ?? '',
+    urgency: capitalizeUrgency(referral.urgency),
+    relevantHistory: draft.history ?? '',
+    medications: draft.medications ?? '',
+    allergies: draft.allergies ?? '',
+    investigations: draft.investigations ?? '',
+    additionalNotes: draft.notes ?? '',
+  }
+}
+
+export function mapBackendPrediction(referral, chartEntriesList) {
+  const pred = referral.latestPrediction
+  if (!pred) {
+    throw new Error('Backend did not return an AI prediction')
+  }
+
+  const byId = Object.fromEntries(chartEntriesList.map((e) => [e.id, e]))
+  const warnings = [...new Set(pred.warnings ?? [])]
+  if (pred.isFallback && !warnings.some((w) => /fallback|unavailable/i.test(w))) {
+    warnings.push('Live AI was unavailable — showing fallback prediction')
+  }
+
+  return {
+    specialty: pred.specialty,
+    confidence: pred.confidence,
+    rationale: pred.rationale,
+    sourceRefs: (pred.sourceChartEntryIds ?? []).map((id) => {
+      const entry = byId[id]
+      const label = entry
+        ? `${new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${entry.title}`
+        : id
+      return { chartEntryId: id, label }
+    }),
+    warnings,
+    isFallback: pred.isFallback,
+    modelLabel: pred.modelLabel,
+  }
 }
 
 function buildWarnings(patientId) {
@@ -53,43 +79,93 @@ function buildWarnings(patientId) {
   return warnings
 }
 
-export async function predictSpecialty(patientId) {
+export async function predictSpecialty(patientId, chartEntriesList = []) {
+  if (isDemoCacheEnabled()) {
+    await delay(350)
+    const cached = getDemoCache('predictSpecialty', patientId)
+    if (cached) {
+      const byId = Object.fromEntries(chartEntriesList.map((e) => [e.id, e]))
+      const sourceRefs = (cached.prediction.sourceRefs ?? []).map((ref) => {
+        const entry = byId[ref.chartEntryId]
+        if (!entry) return ref
+        return {
+          chartEntryId: ref.chartEntryId,
+          label: `${new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${entry.title}`,
+        }
+      })
+      return {
+        ...cached,
+        prediction: { ...cached.prediction, sourceRefs },
+      }
+    }
+  }
+
   if (MOCK) {
     await delay(600)
     const seed = SEEDED_PREDICTIONS[patientId]
     if (!seed) {
       return {
-        specialty: 'General Internal Medicine',
-        confidence: 0.4,
-        rationale: 'Insufficient chart history to confidently predict a subspecialty referral.',
-        sourceRefs: [],
-        warnings: ['Using demo data'],
+        referralId: null,
+        prediction: {
+          specialty: 'General Internal Medicine',
+          confidence: 0.4,
+          rationale: 'Insufficient chart history to confidently predict a subspecialty referral.',
+          sourceRefs: [],
+          warnings: ['Using demo data'],
+        },
+        draft: null,
       }
     }
     const entries = chartEntries.filter((e) => seed.sourceRefIds.includes(e.id))
     return {
-      specialty: seed.specialty,
-      confidence: seed.confidence,
-      rationale: seed.rationale,
-      sourceRefs: entries.map((e) => ({
-        chartEntryId: e.id,
-        label: `${new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${e.title}`,
-      })),
-      warnings: buildWarnings(patientId),
+      referralId: null,
+      prediction: {
+        specialty: seed.specialty,
+        confidence: seed.confidence,
+        rationale: seed.rationale,
+        sourceRefs: entries.map((e) => ({
+          chartEntryId: e.id,
+          label: `${new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${e.title}`,
+        })),
+        warnings: buildWarnings(patientId),
+      },
+      draft: null,
     }
   }
-  const res = await fetch(`${BASE}/api/v1/referrals/predict-specialty`, {
+
+  const referral = await apiFetch('/api/v1/referrals/from-chart', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patientId }),
+    body: JSON.stringify({ patientId, chartWindowDays: 730 }),
   })
-  return res.json()
+
+  const result = {
+    referralId: referral.id,
+    prediction: mapBackendPrediction(referral, chartEntriesList),
+    draft: mapBackendDraft(referral),
+  }
+  setDemoCache('predictSpecialty', patientId, result)
+  if (result.draft?.specialty) {
+    setDemoCache('generateReferralDraft', `${patientId}:${result.draft.specialty}`, result.draft)
+    setDemoCache('generateReferralDraft', `${result.referralId}:${result.draft.specialty}`, result.draft)
+  }
+  return result
 }
 
-export async function generateReferralDraft(patientId, specialty) {
+export async function generateReferralDraft(referralId, specialty) {
+  if (isDemoCacheEnabled()) {
+    await delay(250)
+    const byReferral = getDemoCache('generateReferralDraft', `${referralId}:${specialty}`)
+    if (byReferral) return { ...byReferral, specialty }
+    for (const patientId of Object.keys(SEEDED_PREDICTIONS)) {
+      const hit = getDemoCache('generateReferralDraft', `${patientId}:${specialty}`)
+      if (hit) return { ...hit, specialty }
+    }
+  }
+
   if (MOCK) {
     await delay(500)
-    const entries = chartEntries.filter((e) => e.patientId === patientId)
+    const entries = chartEntries.filter((e) => e.patientId)
     const meds = entries.filter((e) => e.type === 'medication').map((e) => e.content).join(' ')
     const allergies = entries.filter((e) => e.type === 'allergy').map((e) => e.content).join(' ')
     const investigations = entries
@@ -110,23 +186,108 @@ export async function generateReferralDraft(patientId, specialty) {
       additionalNotes: '',
     }
   }
-  const res = await fetch(`${BASE}/api/v1/referrals/generate-draft`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patientId, specialty }),
-  })
-  return res.json()
+
+  let referral = await apiFetch(`/api/v1/referrals/${referralId}`)
+  if (referral.specialty !== specialty) {
+    referral = await apiFetch(`/api/v1/referrals/${referralId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ specialty }),
+    })
+  }
+  const draft = mapBackendDraft(referral)
+  setDemoCache('generateReferralDraft', `${referralId}:${specialty}`, draft)
+  return draft
 }
 
-export async function sendReferral(referral) {
+export async function previewReferral(referralId) {
+  if (isDemoCacheEnabled()) {
+    await delay(150)
+    return { status: 'previewed' }
+  }
+
+  if (MOCK) {
+    await delay(200)
+    return { status: 'previewed' }
+  }
+  return apiFetch(`/api/v1/referrals/${referralId}/preview`, { method: 'POST' })
+}
+
+export async function sendReferral(referralId, specialistId) {
+  if (isDemoCacheEnabled()) {
+    await delay(400)
+    return { status: 'sent', sentAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  }
+
   if (MOCK) {
     await delay(500)
-    return { ...referral, status: 'sent', sentAt: new Date().toISOString() }
+    return { status: 'sent', sentAt: new Date().toISOString() }
   }
-  const res = await fetch(`${BASE}/api/v1/referrals`, {
+
+  let referral = await apiFetch(`/api/v1/referrals/${referralId}`)
+  if (referral.status === 'draft') {
+    referral = await previewReferral(referralId)
+  }
+
+  if (referral.status === 'previewed') {
+    referral = await apiFetch(`/api/v1/referrals/${referralId}/select-specialist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ specialistId }),
+    })
+  }
+
+  return apiFetch(`/api/v1/referrals/${referralId}/send`, { method: 'POST' })
+}
+
+function patientInitials(name) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .join('.')
+    .toUpperCase()
+}
+
+export function mapPortalReferral(row) {
+  return {
+    id: row.id,
+    patientId: row.patientId,
+    patientInitials: patientInitials(row.patientName ?? 'Patient'),
+    specialty: row.specialty ?? '',
+    urgency: capitalizeUrgency(row.urgency),
+    status: row.status,
+    dateSent: row.updatedAt?.slice(0, 10) ?? '',
+    specialistId: row.assignedSpecialistId,
+    draft: {
+      reason: row.reason ?? '',
+      relevantHistory: row.history ?? '',
+      medications: row.medications ?? '',
+      allergies: row.allergies ?? '',
+      investigations: row.investigations ?? '',
+    },
+    rejectionReason: null,
+    infoRequest: null,
+  }
+}
+
+export async function fetchSpecialistReferrals(specialistId) {
+  if (MOCK) return null
+  const rows = await apiFetch(
+    `/api/v1/referrals?specialistId=${encodeURIComponent(specialistId)}`
+  )
+  return rows.map(mapPortalReferral)
+}
+
+export async function approveReferral(referralId) {
+  if (MOCK) return { status: 'approved' }
+  return apiFetch(`/api/v1/referrals/${referralId}/approve`, { method: 'POST' })
+}
+
+export async function rejectReferral(referralId, reason) {
+  if (MOCK) return { status: 'rejected' }
+  return apiFetch(`/api/v1/referrals/${referralId}/reject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(referral),
+    body: JSON.stringify({ reason }),
   })
-  return res.json()
 }

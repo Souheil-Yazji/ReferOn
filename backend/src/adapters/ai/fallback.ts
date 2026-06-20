@@ -1,4 +1,7 @@
 import type { PredictSpecialtyResponse } from "./types.js";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 /**
  * Seeded fallback AI responses keyed by scenario label.
@@ -53,6 +56,64 @@ const FALLBACKS: Record<string, PredictSpecialtyResponse> = {
     },
     modelLabel: "referon-fallback-v1",
   },
+  pulmonology: {
+    specialty: "Pulmonology",
+    confidence: 0.86,
+    rationale:
+      "Chart documents active asthma with recurrent wheezing, cough, and mucus secretion despite inhaled corticosteroid and bronchodilator therapy. Pulmonology evaluation is indicated for optimisation of management.",
+    sourceChartEntryIds: [],
+    warnings: [],
+    draftSections: {
+      reason:
+        "Referral for pulmonology assessment of poorly controlled asthma with recurrent respiratory symptoms.",
+      history:
+        "Patient has adult-onset asthma with repeated visits for wheezing, mucus secretion, and cough. Symptoms persist despite regular fluticasone and albuterol inhaler use.",
+      medications: "Fluticasone MDI daily; Albuterol MDI PRN",
+      allergies: "None known",
+      investigations: "CBC on file.",
+      notes: "",
+    },
+    modelLabel: "referon-fallback-v1",
+  },
+  dermatology: {
+    specialty: "Dermatology",
+    confidence: 0.88,
+    rationale:
+      "Documented irregular borders and color change in a shoulder mole meeting partial ABCDE criteria indicate need for dermatologic evaluation to rule out malignancy.",
+    sourceChartEntryIds: [],
+    warnings: [],
+    draftSections: {
+      reason:
+        "Referral for dermatologic evaluation of suspicious pigmented lesion on left shoulder.",
+      history:
+        "Patient noticed irregular borders and color change in a mole on the left shoulder over the past 2 months. ABCDE criteria partially met.",
+      medications: "Oral contraceptive (combined), Cetirizine 10mg PRN",
+      allergies: "Sulfa drugs (hives)",
+      investigations:
+        "Dermoscopy photo: asymmetric pigmentation, irregular border, approx 7mm diameter.",
+      notes: "",
+    },
+    modelLabel: "referon-fallback-v1",
+  },
+  gastroenterology: {
+    specialty: "Gastroenterology",
+    confidence: 0.61,
+    rationale:
+      "Chronic epigastric pain with only partial response to PPI therapy and negative H. pylori testing suggests need for endoscopic evaluation.",
+    sourceChartEntryIds: [],
+    warnings: [],
+    draftSections: {
+      reason:
+        "Referral for gastroenterology evaluation of chronic epigastric pain with incomplete PPI response.",
+      history:
+        "Patient reports recurring epigastric pain and bloating for 4 months, worse after meals. Trial of PPI provided partial relief only.",
+      medications: "Omeprazole 40mg daily, Amlodipine 5mg daily",
+      allergies: "Latex (contact dermatitis)",
+      investigations: "H. pylori stool antigen: negative.",
+      notes: "",
+    },
+    modelLabel: "referon-fallback-v1",
+  },
   ambiguous: {
     specialty: "Internal Medicine",
     confidence: 0.45,
@@ -93,16 +154,42 @@ const FALLBACKS: Record<string, PredictSpecialtyResponse> = {
 
 const PATIENT_SCENARIO_MAP: Record<string, keyof typeof FALLBACKS> = {};
 
+type PatientScenario =
+  | "orthopedic"
+  | "cardiology"
+  | "pulmonology"
+  | "dermatology"
+  | "gastroenterology"
+  | "ambiguous";
+
 /**
  * Register a patient ID → scenario mapping at seed time so the fallback
  * returns the right fixture for each seeded patient.
  */
 export function registerPatientScenario(
   patientId: string,
-  scenario: "orthopedic" | "cardiology" | "ambiguous"
+  scenario: PatientScenario
 ) {
   PATIENT_SCENARIO_MAP[patientId] = scenario;
 }
+
+function loadPatientScenariosFromSeed() {
+  try {
+    const patientFixtures = require("../../db/seed/patients.json") as Array<{
+      id: string;
+      scenario?: PatientScenario;
+    }>;
+    for (const patient of patientFixtures) {
+      if (patient.scenario) {
+        registerPatientScenario(patient.id, patient.scenario);
+      }
+    }
+  } catch {
+    // Seed file unavailable in some test contexts
+  }
+}
+
+loadPatientScenariosFromSeed();
 
 export function getFallbackPrediction(
   patientId: string,
@@ -115,8 +202,10 @@ export function getFallbackPrediction(
     sourceChartEntryIds:
       sourceChartEntryIds.length > 0 ? sourceChartEntryIds : base.sourceChartEntryIds,
     warnings: [
-      "AI service unavailable; using demo fallback.",
-      ...base.warnings,
+      "Live AI unavailable — using scenario fallback for this patient.",
+      ...base.warnings.filter(
+        (w) => !/AI service unavailable|demo fallback/i.test(w)
+      ),
     ],
     isFallback: true,
   };

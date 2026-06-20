@@ -3,8 +3,10 @@ import { Search } from 'lucide-react'
 import { searchPatients } from '../../api/patients'
 import PatientCard from './PatientCard'
 import Spinner from '../ui/Spinner'
+import { useTranslation } from '../../i18n/useTranslation'
 
 export default function PatientSearch({ onSelect }) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [error, setError] = useState(false)
@@ -38,8 +40,8 @@ export default function PatientSearch({ onSelect }) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name or OHIP number"
-          className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none"
+          placeholder={t('patient.searchPlaceholder')}
+          className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
       </div>
 
@@ -50,16 +52,16 @@ export default function PatientSearch({ onSelect }) {
           </div>
         )}
         {status === 'error' && (
-          <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-            Something went wrong searching patients.
+          <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+            {t('patient.searchError')}
             <button onClick={() => setQuery((q) => q)} className="ml-2 font-semibold underline">
-              Try again
+              {t('shared.tryAgain')}
             </button>
           </div>
         )}
         {status === 'empty' && (
-          <p className="py-6 text-center text-sm text-slate-500">
-            No patients found. Try a different name.
+          <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+            {t('patient.searchEmpty')}
           </p>
         )}
         {status === 'done' &&

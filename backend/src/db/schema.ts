@@ -109,6 +109,7 @@ export const referralPatientPreferences = sqliteTable(
       mode: "json",
     }), // string[]
     language: text("language"),
+    gender: text("gender"),
     timingNotes: text("timing_notes"),
     otherNotes: text("other_notes"),
     updatedAt: text("updated_at")
@@ -167,6 +168,7 @@ export const specialists = sqliteTable("specialists", {
   clinic: text("clinic").notNull(),
   specialty: text("specialty").notNull(),
   subspecialty: text("subspecialty"),
+  gender: text("gender"), // male | female | non-binary
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
   acceptingReferrals: integer("accepting_referrals", { mode: "boolean" })

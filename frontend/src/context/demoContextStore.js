@@ -11,4 +11,5 @@ export const initialDemoState = {
   currentStep: 1,
   specialists: seedSpecialists,
   referrals: seedReferrals,
+  favoriteSpecialistIds: [],
 }

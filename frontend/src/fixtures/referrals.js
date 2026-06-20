@@ -15,10 +15,11 @@ export const seedReferrals = [
     urgency: 'Urgent',
     status: 'pending',
     dateSent: '2026-06-15',
-    specialistId: 'spec_003',
+    specialistId: 'spec_cardio_001',
     draft: {
       reason: 'Evaluation of exertional chest discomfort with dyslipidemia.',
-      relevantHistory: 'Intermittent chest tightness with exertion over 3 weeks, resolves with rest. Family history of CAD.',
+      relevantHistory:
+        'Intermittent chest tightness with exertion over 3 weeks, resolves with rest. Family history of CAD.',
       medications: 'Metformin 1000mg BID, Ramipril 5mg daily.',
       allergies: 'No known drug allergies.',
       investigations: 'Lipid panel: LDL 4.1 mmol/L. ECG: nonspecific ST changes V4-V6.',
@@ -34,7 +35,7 @@ export const seedReferrals = [
     urgency: 'Routine',
     status: 'sent',
     dateSent: '2026-06-10',
-    specialistId: 'spec_005',
+    specialistId: 'spec_derm_001',
     draft: {
       reason: 'Suspicious mole on left shoulder, ABCDE criteria partially met.',
       relevantHistory: 'Irregular borders and color change noted over 2 months.',

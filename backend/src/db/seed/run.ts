@@ -28,7 +28,7 @@ const patientFixtures = require("./patients.json") as Array<{
   addressSummary: string;
   lat: number;
   lng: number;
-  scenario: "orthopedic" | "cardiology" | "ambiguous";
+  scenario: "orthopedic" | "cardiology" | "pulmonology" | "dermatology" | "gastroenterology" | "ambiguous";
 }>;
 const chartFixtures = require("./chart_entries.json") as Array<{
   id: string;
@@ -44,6 +44,7 @@ const specialistFixtures = require("./specialists.json") as Array<{
   clinic: string;
   specialty: string;
   subspecialty: string | null;
+  gender?: string;
   contactEmail: string;
   contactPhone: string;
   acceptingReferrals: boolean;
@@ -128,6 +129,7 @@ export async function runSeed(options: { truncate?: boolean } = {}) {
         clinic: s.clinic,
         specialty: s.specialty,
         subspecialty: s.subspecialty,
+        gender: s.gender ?? null,
         contactEmail: s.contactEmail,
         contactPhone: s.contactPhone,
         acceptingReferrals: s.acceptingReferrals,

@@ -25,6 +25,6 @@ export const patients = [
     name: 'James Whitfeather',
     dob: '1965-06-30',
     ohip: '3344-556-677',
-    location: { lat: 44.2312, lng: -76.4860, label: 'Kingston, ON' },
+    location: { lat: 44.2312, lng: -76.486, label: 'Kingston, ON' },
   },
 ]

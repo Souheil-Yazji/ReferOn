@@ -177,6 +177,40 @@ describe("Invalid transitions return 409", () => {
   });
 });
 
+describe("Gender preference filtering", () => {
+  it("returns only specialists matching preferred gender", async () => {
+    const create = await app.inject({
+      method: "POST",
+      url: "/api/v1/referrals",
+      payload: {
+        patientId: "pat_test_001",
+        specialty: "Orthopedic Surgery",
+      },
+    });
+    const id = create.json<{ id: string }>().id;
+
+    await app.inject({
+      method: "PATCH",
+      url: `/api/v1/referrals/${id}`,
+      payload: { preferences: { gender: "male" } },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/v1/referrals/${id}/specialist-matches`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{
+      matches: Array<{ specialist: { id: string; gender: string | null } }>;
+    }>();
+    expect(body.matches.length).toBeGreaterThan(0);
+    expect(body.matches.every((m) => m.specialist.gender === "male")).toBe(true);
+    expect(body.matches.some((m) => m.specialist.id === "spec_test_002")).toBe(
+      false
+    );
+  });
+});
+
 describe("404 handling", () => {
   it("GET unknown referral returns 404", async () => {
     const res = await app.inject({

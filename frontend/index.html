@@ -4,7 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>ReferOn</title>
+    <script>
+      ;(function () {
+        if (localStorage.getItem('referon_theme') === 'dark') {
+          document.documentElement.classList.add('dark')
+        }
+        var lang = localStorage.getItem('referon_lang') || localStorage.getItem('referon_register_lang')
+        if (lang === 'fr') document.documentElement.lang = 'fr'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

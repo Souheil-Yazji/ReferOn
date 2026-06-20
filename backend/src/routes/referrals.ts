@@ -13,12 +13,13 @@ import { StatusTransitionError } from "../lib/referralStateMachine.js";
 
 export async function referralRoutes(app: FastifyInstance) {
   // GET /referrals?patientId=&status=
-  app.get<{ Querystring: { patientId?: string; status?: string } }>(
+  app.get<{ Querystring: { patientId?: string; status?: string; specialistId?: string } }>(
     "/referrals",
     async (req) => {
       return listReferrals({
         patientId: req.query.patientId,
         status: req.query.status,
+        specialistId: req.query.specialistId,
       });
     }
   );

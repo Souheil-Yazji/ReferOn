@@ -23,7 +23,7 @@ describe("getFallbackPrediction", () => {
   it("always includes AI unavailable warning", () => {
     registerPatientScenario("test_amb", "ambiguous");
     const result = getFallbackPrediction("test_amb", []);
-    expect(result.warnings.some((w) => w.includes("AI service unavailable"))).toBe(true);
+    expect(result.warnings.some((w) => /Live AI unavailable/i.test(w))).toBe(true);
   });
 
   it("uses supplied source chart entry IDs when provided", () => {

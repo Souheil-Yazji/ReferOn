@@ -74,3 +74,53 @@ describe("GET /api/v1/patients/:id/chart-entries", () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe("POST /api/v1/patients/:id/chart-entries", () => {
+  it("creates a lab chart entry from upload metadata", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/pat_test_001/chart-entries",
+      payload: {
+        entryType: "lab",
+        summary: "CBC Panel",
+        fullText: "Uploaded lab result: cbc.pdf (42 KB). Document attached for referral review.",
+        metadata: {
+          fileName: "cbc.pdf",
+          fileSize: 43008,
+          mimeType: "application/pdf",
+        },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json<{ entryType: string; summary: string; patientId: string }>();
+    expect(body.entryType).toBe("lab");
+    expect(body.summary).toBe("CBC Panel");
+    expect(body.patientId).toBe("pat_test_001");
+  });
+
+  it("returns 400 for unsupported entry types", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/pat_test_001/chart-entries",
+      payload: {
+        entryType: "note",
+        summary: "Visit note",
+        fullText: "Should not be allowed via upload",
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 404 for unknown patient", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/pat_bad/chart-entries",
+      payload: {
+        entryType: "imaging",
+        summary: "Chest X-ray",
+        fullText: "Uploaded imaging study: cxr.pdf (100 KB).",
+      },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});

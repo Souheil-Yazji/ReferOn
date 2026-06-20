@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-50: #f0f7ff;
   --color-brand-100: #dbeafe;
@@ -21,8 +23,105 @@
   --color-status-selected_specialist: #ede9fe;
   --color-status-pending: #fef9c3;
   --color-status-sent: #dbeafe;
+  --color-status-more_info_requested: #ffedd5;
   --color-status-approved: #dcfce7;
   --color-status-rejected: #fee2e2;
 
   --color-future: #f1f5f9;
+}
+
+.dark {
+  --color-brand-50: #172554;
+  --color-brand-100: #1e3a8a;
+  --color-brand-500: #3b82f6;
+  --color-brand-700: #60a5fa;
+  --color-brand-900: #dbeafe;
+
+  --color-ai-bg: #052e16;
+  --color-ai-border: #166534;
+  --color-ai-text: #86efac;
+
+  --color-warning-bg: #422006;
+  --color-warning-border: #854d0e;
+  --color-warning-text: #fde047;
+
+  --color-status-draft: #334155;
+  --color-status-previewed: #1e3a8a;
+  --color-status-selected_specialist: #4c1d95;
+  --color-status-pending: #713f12;
+  --color-status-sent: #1e3a8a;
+  --color-status-more_info_requested: #7c2d12;
+  --color-status-approved: #14532d;
+  --color-status-rejected: #7f1d1d;
+
+  --color-future: #334155;
+}
+
+.dark input:not([type='checkbox']):not([type='radio']),
+.dark select,
+.dark textarea {
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+.dark input:not([type='checkbox']):not([type='radio'])::placeholder,
+.dark textarea::placeholder {
+  color: #94a3b8;
+}
+
+.dark .text-slate-900 {
+  color: #f1f5f9;
+}
+
+.dark .text-slate-800 {
+  color: #e2e8f0;
+}
+
+.dark .text-slate-700 {
+  color: #cbd5e1;
+}
+
+.dark .text-slate-600 {
+  color: #94a3b8;
+}
+
+.dark .text-slate-500 {
+  color: #64748b;
+}
+
+.dark .bg-white {
+  background-color: #1e293b;
+}
+
+.dark .bg-slate-50 {
+  background-color: #0f172a;
+}
+
+.dark .bg-slate-100 {
+  background-color: #334155;
+}
+
+.dark .border-slate-100 {
+  border-color: #334155;
+}
+
+.dark .border-slate-200 {
+  border-color: #334155;
+}
+
+.dark .border-slate-300 {
+  border-color: #475569;
+}
+
+.dark .hover\:bg-slate-50:hover {
+  background-color: #334155;
+}
+
+.dark .hover\:bg-slate-100:hover {
+  background-color: #334155;
+}
+
+.dark .hover\:text-slate-700:hover {
+  color: #e2e8f0;
 }

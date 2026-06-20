@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import Button from '../ui/Button'
+import { useTranslation } from '../../i18n/useTranslation'
 
 export default function RejectionReasonModal({ onSubmit, onClose }) {
+  const { t } = useTranslation()
   const [reason, setReason] = useState('')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold tracking-tight text-slate-900">Reject Referral</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-slate-900">{t('modals.rejectTitle')}</h3>
         <label className="mt-4 block">
-          <span className="text-xs uppercase tracking-wide text-slate-500">Reason for rejection (required)</span>
+          <span className="text-xs uppercase tracking-wide text-slate-500">{t('modals.rejectLabel')}</span>
           <textarea
             rows={4}
             value={reason}
@@ -19,10 +21,10 @@ export default function RejectionReasonModal({ onSubmit, onClose }) {
         </label>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t('shared.cancel')}
           </Button>
           <Button variant="danger" disabled={!reason.trim()} onClick={() => onSubmit(reason.trim())}>
-            Submit Rejection
+            {t('modals.submitRejection')}
           </Button>
         </div>
       </div>

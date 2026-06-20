@@ -2,6 +2,7 @@ export const specialists = [
   {
     id: 'spec_001',
     name: 'Dr. Aisha Patel',
+    gender: 'female',
     clinic: 'Toronto Orthopedic Centre',
     specialty: 'Orthopedic Surgery',
     subspecialty: 'Sports Medicine',
@@ -14,6 +15,7 @@ export const specialists = [
   {
     id: 'spec_002',
     name: 'Dr. Marcus Lee',
+    gender: 'male',
     clinic: 'Ottawa Joint & Spine Institute',
     specialty: 'Orthopedic Surgery',
     subspecialty: 'Joint Reconstruction',
@@ -26,6 +28,7 @@ export const specialists = [
   {
     id: 'spec_003',
     name: 'Dr. Helena Voss',
+    gender: 'female',
     clinic: 'Lakeshore Cardiology Associates',
     specialty: 'Cardiology',
     subspecialty: 'Preventive Cardiology',
@@ -38,6 +41,7 @@ export const specialists = [
   {
     id: 'spec_004',
     name: 'Dr. Ravi Sharma',
+    gender: 'male',
     clinic: 'Capital Heart Clinic',
     specialty: 'Cardiology',
     subspecialty: 'Interventional Cardiology',
@@ -50,6 +54,7 @@ export const specialists = [
   {
     id: 'spec_005',
     name: 'Dr. Camille Tremblay',
+    gender: 'female',
     clinic: 'Waterloo Skin & Laser Centre',
     specialty: 'Dermatology',
     subspecialty: 'Skin Cancer Screening',
@@ -62,6 +67,7 @@ export const specialists = [
   {
     id: 'spec_006',
     name: 'Dr. Olúwáṣeun Adebayo',
+    gender: 'non-binary',
     clinic: 'Kingston Digestive Health',
     specialty: 'Gastroenterology',
     subspecialty: 'General GI',

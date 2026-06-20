@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "../db/client.js";
 import {
   aiPredictions,
+  patients,
   referralDraftContent,
   referralPatientPreferences,
   referralRejectionReasons,
@@ -37,6 +38,7 @@ export interface CreateManualReferralInput {
     preferredSpecialistIds?: string[];
     excludedSpecialistIds?: string[];
     language?: string;
+    gender?: string;
     timingNotes?: string;
     otherNotes?: string;
   };
@@ -82,6 +84,7 @@ export async function createManualReferral(input: CreateManualReferralInput) {
       preferredSpecialistIds: input.preferences.preferredSpecialistIds ?? null,
       excludedSpecialistIds: input.preferences.excludedSpecialistIds ?? null,
       language: input.preferences.language ?? null,
+      gender: input.preferences.gender ?? null,
       timingNotes: input.preferences.timingNotes ?? null,
       otherNotes: input.preferences.otherNotes ?? null,
       updatedAt: now,
@@ -247,6 +250,7 @@ export async function getReferralById(id: string) {
 export async function listReferrals(filters: {
   patientId?: string;
   status?: string;
+  specialistId?: string;
 }) {
   const db = getDb();
   const conditions = [];
@@ -256,12 +260,36 @@ export async function listReferrals(filters: {
   if (filters.status) {
     conditions.push(eq(referrals.status, filters.status));
   }
+  if (filters.specialistId) {
+    conditions.push(eq(referrals.assignedSpecialistId, filters.specialistId));
+  }
 
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: referrals.id,
+      patientId: referrals.patientId,
+      status: referrals.status,
+      specialty: referrals.specialty,
+      urgency: referrals.urgency,
+      assignedSpecialistId: referrals.assignedSpecialistId,
+      updatedAt: referrals.updatedAt,
+      patientName: patients.name,
+      reason: referralDraftContent.reason,
+      history: referralDraftContent.history,
+      medications: referralDraftContent.medications,
+      allergies: referralDraftContent.allergies,
+      investigations: referralDraftContent.investigations,
+    })
     .from(referrals)
+    .innerJoin(patients, eq(referrals.patientId, patients.id))
+    .leftJoin(
+      referralDraftContent,
+      eq(referrals.id, referralDraftContent.referralId)
+    )
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(referrals.createdAt));
+    .orderBy(desc(referrals.updatedAt));
+
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
@@ -285,6 +313,7 @@ export interface UpdateReferralInput {
     preferredSpecialistIds?: string[];
     excludedSpecialistIds?: string[];
     language?: string;
+    gender?: string;
     timingNotes?: string;
     otherNotes?: string;
   };

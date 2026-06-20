@@ -12,12 +12,14 @@ import PatientPreferencesForm from '../components/referral/PatientPreferencesFor
 import SpecialistList from '../components/specialist/SpecialistList'
 import SpecialistMap from '../components/specialist/SpecialistMap'
 import ReferralPreview from '../components/referral/ReferralPreview'
+import AIReferralProcessingModal from '../components/referral/AIReferralProcessingModal'
 import { useDemoContext } from '../context/useDemoContext'
 import { useToast } from '../components/ui/useToast'
-import { getChartEntries } from '../api/patients'
-import { predictSpecialty, generateReferralDraft, sendReferral } from '../api/referrals'
+import { getChartEntries, uploadChartDocument } from '../api/patients'
+import { predictSpecialty, generateReferralDraft, previewReferral, sendReferral } from '../api/referrals'
 import { matchSpecialists } from '../api/specialists'
 import { specialtyTaxonomy } from '../fixtures/specialtyTaxonomy'
+import { useTranslation } from '../i18n/useTranslation'
 
 const EMPTY_DRAFT = {
   reason: '',
@@ -33,11 +35,11 @@ const EMPTY_DRAFT = {
 const EMPTY_PREFERENCES = {
   maxDistanceKm: Infinity,
   preferredLanguage: '',
-  preferredSpecialistIds: [],
-  excludedSpecialistIds: [],
-  timingNotes: '',
+  gender: '',
   otherNotes: '',
 }
+
+const MIN_AI_MODAL_MS = 8000
 
 export default function PhysicianView() {
   const {
@@ -48,8 +50,11 @@ export default function PhysicianView() {
     currentReferral,
     setCurrentReferral,
     addReferral,
+    favoriteSpecialistIds,
+    toggleFavoriteSpecialist,
   } = useDemoContext()
   const showToast = useToast()
+  const { t } = useTranslation()
 
   const [chartEntries, setChartEntries] = useState([])
   const [chartError, setChartError] = useState(false)
@@ -59,6 +64,7 @@ export default function PhysicianView() {
   const [matchStatus, setMatchStatus] = useState('done')
   const [hoveredSpecialistId, setHoveredSpecialistId] = useState(null)
   const [sending, setSending] = useState(false)
+  const [uploadingType, setUploadingType] = useState(null)
 
   const referral = currentReferral || {}
   const draft = referral.draft || EMPTY_DRAFT
@@ -99,11 +105,38 @@ export default function PhysicianView() {
 
   const chartStatus = isChartLoading ? 'loading' : chartError ? 'error' : 'done'
 
+  async function handleChartUpload(entryType, file) {
+    if (!selectedPatient) return
+    setUploadingType(entryType)
+    try {
+      const entry = await uploadChartDocument(selectedPatient.id, entryType, file)
+      setChartEntries((prev) =>
+        [entry, ...prev].sort((a, b) => new Date(b.date) - new Date(a.date))
+      )
+      showToast(
+        entryType === 'lab' ? t('toasts.labUploaded') : t('toasts.imagingUploaded')
+      )
+    } catch {
+      showToast(t('toasts.uploadFailed'))
+    } finally {
+      setUploadingType(null)
+    }
+  }
+
   async function createReferralFromChart() {
     setPredictionStatus('loading')
+    const startedAt = Date.now()
     try {
-      const prediction = await predictSpecialty(selectedPatient.id)
-      updateReferral({ prediction, draft: { ...EMPTY_DRAFT, specialty: prediction.specialty }, status: 'draft' })
+      const result = await predictSpecialty(selectedPatient.id, chartEntries)
+      const remaining = MIN_AI_MODAL_MS - (Date.now() - startedAt)
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining))
+
+      updateReferral({
+        id: result.referralId,
+        prediction: result.prediction,
+        draft: result.draft ?? { ...EMPTY_DRAFT, specialty: result.prediction.specialty },
+        status: 'draft',
+      })
       setPredictionStatus('done')
       setCurrentStep(3)
     } catch {
@@ -111,15 +144,12 @@ export default function PhysicianView() {
     }
   }
 
-  function createManually() {
-    updateReferral({ draft: EMPTY_DRAFT, status: 'draft' })
-    setCurrentStep(4)
-  }
-
   async function acceptPrediction(specialty) {
     setDraftStatus('loading')
     try {
-      const generatedDraft = await generateReferralDraft(selectedPatient.id, specialty)
+      const generatedDraft = referral.id
+        ? await generateReferralDraft(referral.id, specialty)
+        : { ...EMPTY_DRAFT, specialty }
       updateReferral({ draft: generatedDraft, status: 'draft' })
       setDraftStatus('done')
       setCurrentStep(4)
@@ -128,13 +158,14 @@ export default function PhysicianView() {
     }
   }
 
-  function overridePrediction(specialty) {
-    acceptPrediction(specialty)
-  }
-
-  function goToPreferences() {
-    transitionStatus('previewed', 'Referral draft saved')
-    setCurrentStep(5)
+  async function goToPreferences() {
+    try {
+      if (referral.id) await previewReferral(referral.id)
+      transitionStatus('previewed', t('toasts.draftSaved'))
+      setCurrentStep(5)
+    } catch {
+      showToast(t('toasts.previewFailed'))
+    }
   }
 
   async function findSpecialists() {
@@ -142,6 +173,7 @@ export default function PhysicianView() {
     setCurrentStep(6)
     try {
       const results = await matchSpecialists({
+        referralId: referral.id,
         specialty: draft.specialty,
         patientLocation: selectedPatient.location,
         preferences,
@@ -154,34 +186,36 @@ export default function PhysicianView() {
   }
 
   function selectSpecialist(specialist) {
-    transitionStatus('selected_specialist', `${specialist.name} selected`)
+    transitionStatus('selected_specialist', t('toasts.specialistSelected', { name: specialist.name }))
     updateReferral({ specialist })
     setCurrentStep(7)
   }
 
   async function handleSend() {
     setSending(true)
-    transitionStatus('pending', 'Referral pending submission')
+    transitionStatus('pending', t('toasts.pendingSubmission'))
     try {
-      const sent = await sendReferral({ ...referral, patientId: selectedPatient.id })
+      const sent = await sendReferral(referral.id, referral.specialist.id)
       await new Promise((r) => setTimeout(r, 800))
-      transitionStatus('sent', 'Referral sent successfully')
-      addReferral({
-        id: `ref_${Date.now()}`,
-        patientId: selectedPatient.id,
-        patientInitials: selectedPatient.name
-          .split(' ')
-          .map((p) => p[0])
-          .join('.')
-          .toUpperCase(),
-        specialty: draft.specialty,
-        urgency: draft.urgency,
-        status: 'sent',
-        dateSent: sent.sentAt?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-        specialistId: referral.specialist.id,
-        draft,
-        rejectionReason: null,
-      })
+      transitionStatus('sent', t('toasts.sentSuccess'))
+      if (import.meta.env.VITE_USE_MOCK === 'true') {
+        addReferral({
+          id: referral.id,
+          patientId: selectedPatient.id,
+          patientInitials: selectedPatient.name
+            .split(' ')
+            .map((p) => p[0])
+            .join('.')
+            .toUpperCase(),
+          specialty: draft.specialty,
+          urgency: draft.urgency,
+          status: sent.status ?? 'sent',
+          dateSent: sent.updatedAt?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          specialistId: referral.specialist.id,
+          draft,
+          rejectionReason: null,
+        })
+      }
     } finally {
       setSending(false)
     }
@@ -190,12 +224,22 @@ export default function PhysicianView() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <div className="mb-8">
-        <StepIndicator currentStep={currentStep} />
+        <StepIndicator currentStep={currentStep} onStepClick={setCurrentStep} />
       </div>
+
+      {currentStep > 1 && (
+        <button
+          type="button"
+          onClick={() => setCurrentStep(currentStep - 1)}
+          className="mb-4 text-sm font-medium text-slate-500 hover:text-slate-700"
+        >
+          {t('shared.back')}
+        </button>
+      )}
 
       {currentStep === 1 && (
         <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Select Patient</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">{t('physician.selectPatient')}</h2>
           <PatientSearch onSelect={selectPatient} />
         </Card>
       )}
@@ -203,7 +247,7 @@ export default function PhysicianView() {
       {currentStep === 2 && selectedPatient && (
         <Card className="p-6">
           <PatientCard patient={selectedPatient} />
-          <h2 className="mb-3 mt-6 text-lg font-semibold tracking-tight text-slate-900">Review Chart</h2>
+          <h2 className="mb-3 mt-6 text-lg font-semibold tracking-tight text-slate-900">{t('physician.reviewChart')}</h2>
           {chartStatus === 'loading' && (
             <div className="flex justify-center py-8">
               <Spinner />
@@ -211,24 +255,32 @@ export default function PhysicianView() {
           )}
           {chartStatus === 'error' && (
             <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-              Couldn't load chart entries.{' '}
+              {t('physician.chartLoadError')}{' '}
               <button onClick={() => setCurrentStep(2)} className="font-semibold underline">
-                Try again
+                {t('shared.tryAgain')}
               </button>
             </div>
           )}
-          {chartStatus === 'done' && <ChartSummary entries={chartEntries} />}
+          {chartStatus === 'done' && (
+            <ChartSummary
+              entries={chartEntries}
+              onUpload={handleChartUpload}
+              uploadingType={uploadingType}
+            />
+          )}
 
           <div className="mt-6 flex gap-3">
-            <Button variant="primary" onClick={createReferralFromChart} loading={predictionStatus === 'loading'}>
-              Create Referral from Chart
-            </Button>
-            <Button variant="secondary" onClick={createManually}>
-              Create Manually
+            <Button
+              variant="primary"
+              onClick={createReferralFromChart}
+              disabled={predictionStatus === 'loading'}
+            >
+              {t('physician.createReferral')}
             </Button>
           </div>
+          {predictionStatus === 'loading' && <AIReferralProcessingModal />}
           {predictionStatus === 'error' && (
-            <p className="mt-2 text-sm text-red-600">AI prediction failed. Try again.</p>
+            <p className="mt-2 text-sm text-red-600">{t('physician.predictionError')}</p>
           )}
         </Card>
       )}
@@ -236,9 +288,8 @@ export default function PhysicianView() {
       {currentStep === 3 && referral.prediction && (
         <SpecialtyPredictionCard
           prediction={referral.prediction}
-          specialtyOptions={specialtyTaxonomy}
+          chartEntries={chartEntries}
           onAccept={acceptPrediction}
-          onOverride={overridePrediction}
         />
       )}
       {currentStep === 3 && draftStatus === 'loading' && (
@@ -249,14 +300,14 @@ export default function PhysicianView() {
 
       {currentStep === 4 && (
         <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Edit Referral Draft</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">{t('physician.editDraft')}</h2>
           <ReferralDraftForm draft={draft} onChange={(d) => updateReferral({ draft: d })} onNext={goToPreferences} />
         </Card>
       )}
 
       {currentStep === 5 && (
         <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Patient Preferences</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">{t('physician.patientPreferences')}</h2>
           <PatientPreferencesForm
             preferences={preferences}
             onChange={(p) => updateReferral({ preferences: p })}
@@ -267,13 +318,15 @@ export default function PhysicianView() {
 
       {currentStep === 6 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Match Specialist</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">{t('physician.matchSpecialist')}</h2>
           <div className="grid grid-cols-2 gap-6" style={{ minHeight: '480px' }}>
             <div className="overflow-y-auto pr-2" style={{ maxHeight: '600px' }}>
               <SpecialistList
                 specialists={referral.matchedSpecialists}
                 status={matchStatus}
                 highlightedId={hoveredSpecialistId}
+                favoriteIds={favoriteSpecialistIds}
+                onToggleFavorite={toggleFavoriteSpecialist}
                 onSelect={selectSpecialist}
                 onHover={setHoveredSpecialistId}
               />
@@ -293,10 +346,11 @@ export default function PhysicianView() {
       {currentStep === 7 && referral.specialist && (
         <ReferralPreview
           patient={selectedPatient}
-          physicianName="Dr. Demo Physician"
+          physicianName={t('physician.demoPhysician')}
           specialist={referral.specialist}
           draft={draft}
           status={referral.status}
+          onDraftChange={(d) => updateReferral({ draft: d })}
           sending={sending}
           onSend={handleSend}
         />

@@ -1,7 +1,10 @@
 import { MapPin } from 'lucide-react'
 import Card from '../ui/Card'
+import { useTranslation } from '../../i18n/useTranslation'
 
 export default function PatientCard({ patient, onClick, compact = false }) {
+  const { t } = useTranslation()
+
   return (
     <Card
       as={onClick ? 'button' : 'div'}
@@ -10,10 +13,16 @@ export default function PatientCard({ patient, onClick, compact = false }) {
     >
       <div className="flex items-center justify-between">
         <p className="font-semibold tracking-tight text-slate-900">{patient.name}</p>
-        {!compact && <span className="text-xs text-slate-500">DOB {patient.dob}</span>}
+        {!compact && (
+          <span className="text-xs text-slate-500">
+            {t('shared.dob')} {patient.dob}
+          </span>
+        )}
       </div>
       <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-        <span>OHIP {patient.ohip}</span>
+        <span>
+          {t('shared.ohip')} {patient.ohip}
+        </span>
         {!compact && (
           <span className="flex items-center gap-1">
             <MapPin className="h-3 w-3" />

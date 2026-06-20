@@ -4,6 +4,7 @@ import type {
   PredictSpecialtyResponse,
 } from "./types.js";
 import { getFallbackPrediction } from "./fallback.js";
+import { predictSpecialtyWithOpenAI } from "./openai.js";
 
 export interface PredictResult extends PredictSpecialtyResponse {
   isFallback: boolean;
@@ -19,6 +20,11 @@ export async function predictSpecialty(
   );
 
   try {
+    if (env.OPENAI_API_KEY) {
+      const data = await predictSpecialtyWithOpenAI(request, controller.signal);
+      return { ...data, isFallback: false };
+    }
+
     const response = await fetch(
       `${env.AI_SERVICE_URL}/v1/predict-specialty`,
       {

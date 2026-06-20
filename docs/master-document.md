@@ -1,8 +1,8 @@
 # ReferOn Master Document
 
-Version: 0.2  
+Version: 0.3  
 Status: Draft  
-Last updated: 2026-06-18  
+Last updated: 2026-06-20  
 Owner: ReferOn product and engineering
 
 ## 1. Purpose
@@ -260,7 +260,7 @@ These are demo personas, not production security roles.
 - Web frontend: Clinician/admin demo view, specialist registration view, and specialist map/list.
 - API backend: Lightweight JSON API for patient, referral, specialist, and matching workflows.
 - Data store: Simple relational database, embedded database, or JSON fixtures depending on selected stack.
-- AI service adapter: Boundary around model calls, prompt templates, safety checks, and provenance logging.
+- Backend OpenAI adapter: Boundary around the Responses API call, prompt template, structured JSON schema, response validation, timeout, and fallback behavior.
 - Chart fixture provider: Supplies seeded patient histories.
 - Distance adapter: Computes distance from pre-seeded coordinates.
 
@@ -274,10 +274,10 @@ flowchart LR
 
   API --> Store[("POC Data Store")]
   API --> Chart["Seeded Chart Fixtures"]
-  API --> AI["AI Specialty Prediction Adapter"]
+  API --> AI["Backend OpenAI Referral Adapter"]
   API --> Geo["Distance/Matching Adapter"]
 
-  AI --> Model["AI Model Provider"]
+  AI --> Model["OpenAI Responses API"]
   Geo --> Map["Map/List UI"]
 ```
 
@@ -437,6 +437,15 @@ The first implementation should treat these as draft contracts. Exact request/re
 - Track whether prior rejection reasons reduce repeat rejections on similar cases.
 - Review model performance by specialty class to detect blind spots.
 
+### 12.4 Backend OpenAI Adapter
+
+- The backend owns the OpenAI API call; the frontend never calls OpenAI directly.
+- `POST /api/v1/referrals/from-chart` builds a prompt from Synthea-derived chart entries and prior rejection feedback.
+- One OpenAI Responses API call returns specialty prediction, rationale, source chart entry IDs, warnings, and draft referral sections.
+- The response is requested as strict structured JSON and validated by the backend before persistence.
+- Runtime configuration is provided by `OPENAI_API_KEY`, `OPENAI_REFERRAL_MODEL`, `OPENAI_BASE_URL`, and `AI_TIMEOUT_MS`.
+- If OpenAI is unavailable or validation fails, the backend uses seeded demo fallback predictions.
+
 ## 13. Future Security and Privacy Model
 
 Security, privacy, and identity are intentionally deferred from the hackathon POC so the team can demonstrate business value first. They remain mandatory for any pilot or production use.
@@ -544,6 +553,7 @@ Future implementation must include:
 | 2026-06-18 | Scope the first build as a hackathon POC rather than production MVP. | Focus the demo on business value and product clarity. |
 | 2026-06-18 | Defer user identity, RBAC, production security, and audit logging. | These are critical for production but would distract from the first proof of value. |
 | 2026-06-18 | Use seeded synthetic or de-identified chart data for the POC. | Avoid privacy risk while keeping the demo realistic. |
+| 2026-06-20 | Implement AI referral generation inside the backend with OpenAI structured JSON output. | Keep API keys server-side and return a backend-validated response the client can render predictably. |
 
 ## 18. Document Maintenance Rules
 

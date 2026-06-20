@@ -1,12 +1,23 @@
 # AI Service Contract
 
-This document defines the HTTP contract the ReferOn backend expects from the AI service. The backend owns the schema; the AI service must implement a server at `AI_SERVICE_URL` (configured via environment variable, default `http://localhost:8000`).
+This document defines the AI contract owned by the ReferOn backend. In the POC, the backend can call OpenAI directly when `OPENAI_API_KEY` is configured, or fall back to the legacy local AI service at `AI_SERVICE_URL` when no OpenAI key is present. In both cases, the backend persists the same `PredictSpecialtyResponse` shape.
 
 ## Endpoints
 
-### `POST /v1/predict-specialty`
+### Backend OpenAI call
 
-Called by the backend when a physician triggers AI-assisted referral creation or requests a re-prediction. The backend assembles the chart entries and prior rejection feedback; the AI service classifies the required specialty and drafts referral sections.
+Called by the backend when a physician triggers AI-assisted referral creation or requests a re-prediction. The backend assembles chart entries and prior rejection feedback, builds the prompt, calls the OpenAI Responses API with strict structured JSON output, validates the result, and stores the parsed referral analysis.
+
+Runtime settings:
+
+- `OPENAI_API_KEY`: server-side key used by the backend only.
+- `OPENAI_REFERRAL_MODEL`: model used for referral generation, default `gpt-5.5`.
+- `OPENAI_BASE_URL`: OpenAI API base URL, default `https://api.openai.com/v1`.
+- `AI_TIMEOUT_MS`: timeout applied to the OpenAI request.
+
+### Legacy local AI service: `POST /v1/predict-specialty`
+
+If `OPENAI_API_KEY` is not configured, the backend can call a local service at `AI_SERVICE_URL`. The local service must satisfy the same request and response contract. The backend assembles the chart entries and prior rejection feedback; the AI service classifies the required specialty and drafts referral sections.
 
 **Request body:**
 
@@ -74,7 +85,7 @@ Called by the backend when a physician triggers AI-assisted referral creation or
 
 ## Resilience
 
-The backend applies a timeout of `AI_TIMEOUT_MS` (default 30 s) to every call. If the request times out or returns a non-200 response, the backend falls back to seeded demo predictions and appends `"AI service unavailable; using demo fallback."` to `warnings`. The manual referral path never calls the AI service.
+The backend applies a timeout of `AI_TIMEOUT_MS` (default 30 s) to every AI call. If OpenAI or the legacy local service times out, returns a non-200 response, or returns an invalid structured payload, the backend falls back to seeded demo predictions and appends `"AI service unavailable; using demo fallback."` to `warnings`. The manual referral path never calls the AI service.
 
 ## Rejection feedback
 

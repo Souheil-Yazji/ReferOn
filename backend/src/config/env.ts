@@ -5,6 +5,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default("file:./data/referon.db"),
   AI_SERVICE_URL: z.string().url().default("http://localhost:8000"),
   AI_TIMEOUT_MS: z.coerce.number().default(30000),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+  OPENAI_REFERRAL_MODEL: z.string().default("gpt-5.5"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   NODE_ENV: z
     .enum(["development", "production", "test"])
